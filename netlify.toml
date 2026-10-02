@@ -1,0 +1,34 @@
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Supabase через домен сайта (на случай, если supabase.co недоступен у игрока)
+[[redirects]]
+  from = "/sb/*"
+  to = "https://zykuquspmtmfcaofebxx.supabase.co/:splat"
+  status = 200
+  force = true
+
+# Пико и сокровища: отдельный сайт на Netlify, показывается по адресу /piko/
+# Без слеша на конце относительные пути игры ломаются — добавляем его
+[[redirects]]
+  from = "/piko"
+  to = "/piko/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/piko/*"
+  to = "https://brilliant-eclair-mar.netlify.app/:splat"
+  status = 200
+  force = true
