@@ -23,6 +23,7 @@
 | `Platform.logout()` | выход везде на этом устройстве |
 | `Platform.load()` | прогресс этой игры из облака: `{ data, updated_at }` или `null` |
 | `Platform.save(data)` | сохранить прогресс этой игры (таблица `saves`), вернёт время |
+| `Platform.isAdmin()` | Promise: вошедший игрок — админ (кнопка «Сводка» на витрине) |
 | `Platform.client` | клиент Supabase для своих таблиц игры |
 
 Сессия лежит в `localStorage['mlymir-auth']` — общая для всех путей домена. Старая сессия Пико (`piko-auth`) переносится сама.

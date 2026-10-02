@@ -46,7 +46,8 @@ body{
 
 .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 40px}
 
-.topbar{display:flex;justify-content:flex-end;min-height:36px}
+.topbar{display:flex;justify-content:flex-end;gap:8px;min-height:36px}
+.admin-link{text-decoration:none}
 header{display:flex;align-items:center;gap:14px;padding:4px 0 26px}
 header .titles{flex:1;min-width:0}
 .acct{display:flex;align-items:center;gap:6px;border:0;cursor:pointer;
@@ -104,6 +105,10 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
 
 <div class="wrap">
   <div class="topbar">
+      <a class="acct admin-link" id="adminLink" href="/admin/" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Сводка</span>
+      </a>
       <button class="acct" id="acct" type="button" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-4 4.2-6 7.5-6s6.3 2 7.5 6"/></svg>
         <span>Войти</span>
@@ -159,7 +164,12 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
 // Кнопка аккаунта
 (function(){
   const b = document.getElementById('acct'), t = b.querySelector('span');
-  const show = u => { t.textContent = u ? u.username : 'Войти'; b.title = u ? 'Аккаунт' : 'Войти или зарегистрироваться'; b.hidden = false; };
+  const adm = document.getElementById('adminLink');
+  const show = u => {
+    t.textContent = u ? u.username : 'Войти'; b.title = u ? 'Аккаунт' : 'Войти или зарегистрироваться'; b.hidden = false;
+    adm.hidden = true;
+    if (u) Platform.isAdmin().then(ok => { if (ok && Platform.user() && Platform.user().id === u.id) adm.hidden = false; });
+  };
   Platform.ready.then(show);
   Platform.onChange(show);
   b.addEventListener('click', () => Platform.login());
