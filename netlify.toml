@@ -20,13 +20,8 @@
   force = true
 
 # Пико и сокровища: отдельный сайт на Netlify, показывается по адресу /piko/
-# Без слеша на конце относительные пути игры ломаются — добавляем его
-[[redirects]]
-  from = "/piko"
-  to = "/piko/"
-  status = 301
-  force = true
-
+# Ссылки на игру всегда со слешем на конце: /piko/ (Netlify не различает /piko и /piko/,
+# поэтому правило «добавить слеш» тут зацикливается)
 [[redirects]]
   from = "/piko/*"
   to = "https://brilliant-eclair-mar.netlify.app/:splat"
