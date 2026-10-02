@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /sb/
+
+Sitemap: https://mlymir.ru/sitemap.xml
