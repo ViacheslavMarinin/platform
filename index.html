@@ -20,6 +20,7 @@
   --card:#fffdf6; --card-edge:#f0e6c8;
   --duck:#ffd23f; --duck-deep:#f2b705; --cap:#e63946;
   --piko:#4b2fb0;
+  --hamsters:#d4732c;
   --radius:22px;
 }
 *{box-sizing:border-box;margin:0}
@@ -74,6 +75,8 @@ h2{font-weight:800;font-size:20px;margin:0 0 12px 4px}
 .game .art{aspect-ratio:4/3;display:grid;place-items:center;overflow:hidden}
 .game .art img{width:100%;height:100%;object-fit:cover;display:block}
 .game.piko .art{background:var(--piko)}
+.game.hamsters .art{background:#f2e9d6}
+.game.hamsters .play{background:var(--hamsters)}
 .game .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
 .game .name{font-weight:800;font-size:19px}
 .game .about{color:var(--ink-soft);font-size:14px;line-height:1.35;flex:1}
@@ -122,6 +125,14 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
         <div class="body">
           <div class="name">Пико и сокровища</div>
           <div class="about">Три в ряд с дракончиком Пико: сотни уровней, препятствия и сокровища.</div>
+          <span class="play">Играть</span>
+        </div>
+      </a>
+      <a class="game hamsters" href="/hamsters/">
+        <div class="art"><img src="/img/hamsters.webp" alt="Хомяки разбирают пиксельную картинку" width="384" height="384" loading="lazy"></div>
+        <div class="body">
+          <div class="name">Хомячья мозаика</div>
+          <div class="about">Головоломка: выпускай хомяков из норок, и они разберут картинку по цветам. 100 уровней.</div>
           <span class="play">Играть</span>
         </div>
       </a>

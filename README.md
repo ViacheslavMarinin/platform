@@ -5,6 +5,7 @@
 ## Как устроено
 - `mlymir.ru/` — витрина (этот репозиторий).
 - `mlymir.ru/piko/` — «Пико и сокровища», отдельный сайт на Netlify (`brilliant-eclair-mar.netlify.app`, репозиторий `piko-treasures`). Подставляется под путь правилом в `netlify.toml`.
+- `mlymir.ru/hamsters/` — «Хомячья мозаика», отдельный сайт на Netlify (`hamster33.netlify.app`, репозиторий `hamster-mosaic`).
 - `mlymir.ru/sb/*` — прокси к Supabase (`zykuquspmtmfcaofebxx`), чтобы обходить блокировки.
 - Вход общий, потому что все игры открываются с одного домена.
 

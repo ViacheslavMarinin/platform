@@ -32,3 +32,10 @@
   to = "https://brilliant-eclair-mar.netlify.app/:splat"
   status = 200
   force = true
+
+# Хомячья мозаика: отдельный сайт на Netlify (репозиторий hamster-mosaic), показывается по адресу /hamsters/
+[[redirects]]
+  from = "/hamsters/*"
+  to = "https://hamster33.netlify.app/:splat"
+  status = 200
+  force = true
