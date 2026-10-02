@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Сводка · Мой маленький мир</title>
+<link rel="icon" href="/img/duck.svg" type="image/svg+xml">
+<style>
+@font-face{font-family:'Nunito';font-weight:600;font-display:swap;src:url(/fonts/nunito-cyrillic-600.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:'Nunito';font-weight:800;font-display:swap;src:url(/fonts/nunito-cyrillic-800.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:'Nunito';font-weight:600;font-display:swap;src:url(/fonts/nunito-latin-600.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:'Nunito';font-weight:800;font-display:swap;src:url(/fonts/nunito-latin-800.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F}
+:root{
+  --bg:#e3f4f8; --card:#fffdf6; --edge:#efe6c9;
+  --ink:#1f3a4a; --ink-2:#4d6b7a; --muted:#7c94a0; --grid:#e6ece9;
+  --bar:#1f86b8; --bar-hi:#16688f;
+}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;background:var(--bg);color:var(--ink);font:600 15px/1.4 'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:900px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 40px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.top a.back{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-weight:800}
+.top a.back img{width:34px;height:34px}
+.top .sp{flex:1}
+.btn{border:0;border-radius:999px;padding:9px 14px;font:inherit;font-weight:800;font-size:14px;cursor:pointer;background:var(--card);color:var(--ink);box-shadow:0 1px 4px -1px rgba(31,58,74,.3)}
+.btn.pri{background:#ffd23f;color:#3a2a00}
+h1{font-weight:800;font-size:26px;line-height:1.1}
+.sub{color:var(--ink-2);font-size:13px;margin:4px 0 18px}
+h2{font-weight:800;font-size:17px;margin:0 0 10px}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 1px 0 var(--edge),0 8px 20px -14px rgba(31,58,74,.45);margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media (max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--card);border-radius:18px;padding:14px;box-shadow:0 1px 0 var(--edge)}
+.tile .l{color:var(--ink-2);font-size:13px}
+.tile .v{font-weight:800;font-size:30px;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .d{color:var(--muted);font-size:12px;margin-top:2px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.charts{grid-template-columns:1fr}}
+.charts .card{margin:0}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .ax{fill:var(--muted);font-size:10px}
+.chart .gl{stroke:var(--grid);stroke-width:1}
+.chart .b{fill:var(--bar)}
+.chart g.col:hover .b,.chart g.col:focus .b{fill:var(--bar-hi)}
+.chart g.col{outline:none;cursor:default}
+.chart .tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;font-weight:800;padding:5px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .1s}
+.chart .tip.on{opacity:1}
+.chart .tot{color:var(--ink-2);font-size:13px;margin:-6px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--ink-2);font-weight:800;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--grid)}
+td{padding:8px;border-bottom:1px solid var(--grid);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto;margin:0 -16px;padding:0 16px}
+.muted{color:var(--muted)}
+.state{text-align:center;padding:40px 16px}
+.state img{width:72px;height:72px;margin-bottom:10px}
+.state p{color:var(--ink-2);margin:6px 0 16px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/"><img src="/img/duck.svg" alt=""><span>Мой маленький мир</span></a>
+    <span class="sp"></span>
+    <button class="btn" id="refresh" type="button" hidden>Обновить</button>
+    <button class="btn" id="acct" type="button" hidden></button>
+  </div>
+
+  <div id="msg" class="card state"><p>Загружаю…</p></div>
+
+  <main id="report" hidden>
+    <h1>Сводка платформы</h1>
+    <p class="sub" id="gen"></p>
+    <div class="tiles" id="tiles"></div>
+    <div class="charts">
+      <div class="card"><h2>Регистрации</h2><p class="tot" id="totNew"></p><div class="chart" id="chNew"></div></div>
+      <div class="card"><h2>Играли</h2><p class="tot" id="totAct"></p><div class="chart" id="chAct"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h2>Игры</h2><div class="scroll"><table id="apps"></table></div></div>
+    <div class="card"><h2>Игроки</h2><div class="scroll"><table id="players"></table></div></div>
+  </main>
+</div>
+
+<script src="/sdk/v1.js" data-app="platform"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const num = n => Number(n || 0).toLocaleString('ru-RU');
+  const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const day = s => { if (!s) return ''; const [y,m,d] = s.slice(0,10).split('-'); return +d + ' ' + MON[+m-1]; };
+  const when = s => {
+    if (!s) return '<span class="muted">—</span>';
+    const t = s.slice(0,10), today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Moscow' });
+    const hm = s.slice(11,16);
+    if (t === today) return 'сегодня, ' + hm;
+    const y = new Date(Date.parse(today) - 864e5).toISOString().slice(0,10);
+    if (t === y) return 'вчера, ' + hm;
+    return day(s);
+  };
+
+  function show(html){ $('report').hidden = true; $('refresh').hidden = true; $('msg').hidden = false; $('msg').innerHTML = html; }
+  function guest(){
+    show('<img src="/img/duck.svg" alt=""><h2>Сводка только для админа</h2><p>Войди под своим логином.</p><button class="btn pri" id="go" type="button">Войти</button>');
+    $('go').onclick = () => Platform.login('login');
+  }
+  function forbidden(u){
+    show(`<img src="/img/duck.svg" alt=""><h2>Нет доступа</h2><p>Ты вошёл как ${esc(u.username)}. Сводка открыта только админу.</p><button class="btn" id="go" type="button">Сменить аккаунт</button>`);
+    $('go').onclick = () => Platform.login();
+  }
+
+  // столбики по дням: одна серия, подсказка при наведении/касании
+  function bars(el, rows, key, label){
+    const W = Math.max(240, Math.round(el.clientWidth || 300)), H = 150, top = 8, bottom = 18, left = 22, n = rows.length;
+    const max = Math.max(1, ...rows.map(r => r[key]));
+    const step = Math.max(1, Math.ceil(max / 3)), ymax = step * Math.ceil(max / step);
+    const cw = (W - left) / n, bw = Math.max(2, cw - 2), y = v => top + (H - top - bottom) * (1 - v / ymax);
+    let g = '';
+    for (let v = 0; v <= ymax; v += step) g += `<line class="gl" x1="${left}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${left - 5}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+    let cols = '';
+    rows.forEach((r, i) => {
+      const x = left + i * cw + 1, v = r[key], h = Math.max(0, y(0) - y(v));
+      const rr = Math.min(4, bw / 2, h);
+      const yt = y(v), y0 = y(0);   // скругление только сверху, низ стоит на оси
+      const path = h > 0 ? `<path class="b" d="M${x},${y0}V${yt + rr}Q${x},${yt} ${x + rr},${yt}H${x + bw - rr}Q${x + bw},${yt} ${x + bw},${yt + rr}V${y0}Z"/>` : '';
+      cols += `<g class="col" tabindex="0" data-i="${i}" aria-label="${esc(day(r.day) + ': ' + v)}"><rect x="${left + i * cw}" y="${top}" width="${cw}" height="${H - top - bottom}" fill="transparent"/>${path}</g>`;
+    });
+    const tick = i => `<text class="ax" x="${left + i * cw + cw / 2}" y="${H - 4}" text-anchor="middle">${day(rows[i].day)}</text>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)} за 30 дней">${g}${cols}${tick(0)}${tick(Math.floor((n - 1) / 2))}${tick(n - 1)}</svg><div class="tip"></div>`;
+    const tip = el.querySelector('.tip'), svg = el.querySelector('svg');
+    const on = e => {
+      const c = e.target.closest('g.col'); if (!c){ tip.classList.remove('on'); return; }
+      const i = +c.dataset.i, r = rows[i], sb = svg.getBoundingClientRect(), eb = el.getBoundingClientRect();
+      const px = (left + i * cw + cw / 2) / W * sb.width + (sb.left - eb.left);
+      const py = y(r[key]) / H * sb.height + (sb.top - eb.top) - 6;
+      tip.textContent = `${day(r.day)}: ${r[key]}`; tip.style.left = px + 'px'; tip.style.top = py + 'px'; tip.classList.add('on');
+    };
+    svg.addEventListener('pointermove', on); svg.addEventListener('focusin', on); svg.addEventListener('pointerdown', on);
+    svg.addEventListener('pointerleave', () => tip.classList.remove('on'));
+  }
+
+  function render(s){
+    const t = s.totals;
+    $('gen').textContent = 'Данные на ' + new Date(s.generated_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + ' (МСК)';
+    const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${num(v)}</div><div class="d">${d}</div></div>`;
+    $('tiles').innerHTML =
+      tile('Игроков всего', t.players, `+${num(t.new_7d)} за неделю`) +
+      tile('Заходили сегодня', t.active_today, `новых сегодня: ${num(t.new_today)}`) +
+      tile('За 7 дней', t.active_7d, 'заходили или играли') +
+      tile('За 30 дней', t.active_30d, `новых: ${num(t.new_30d)}`);
+    const sum = k => s.daily.reduce((a, r) => a + r[k], 0);
+    $('totNew').textContent = `${num(sum('new'))} за 30 дней`;
+    $('totAct').textContent = 'сколько игроков играло в каждый день';
+    const draw = () => { bars($('chNew'), s.daily, 'new', 'Регистрации'); bars($('chAct'), s.daily, 'active', 'Играли'); };
+    $('msg').hidden = true; $('report').hidden = false;
+    draw(); window.onresize = () => { clearTimeout(window._rt); window._rt = setTimeout(draw, 150); };
+    $('apps').innerHTML = '<tr><th>Игра</th><th class="n">Игроков</th><th class="n">Играли за 7 дней</th></tr>' +
+      s.apps.map(a => `<tr><td>${esc(a.title)}</td><td class="n">${num(a.players)}</td><td class="n">${num(a.active_7d)}</td></tr>`).join('');
+    const codes = s.apps.map(a => a.code);
+    const titles = Object.fromEntries(s.apps.map(a => [a.code, a.title]));
+    $('players').innerHTML = '<tr><th>Логин</th><th>Регистрация</th><th>Последний раз</th><th>Игры</th></tr>' +
+      s.players.map(p => {
+        const g = Object.entries(p.games || {}).map(([c, v]) => esc((titles[c] || c).split(' ')[0]) + (v.level ? ` · ур. ${esc(v.level)}` : '')).join('<br>') || '<span class="muted">не играл</span>';
+        return `<tr><td><b>${esc(p.username)}</b></td><td>${day(p.created)}</td><td>${when(p.last_seen)}</td><td>${g}</td></tr>`;
+      }).join('');
+    $('msg').hidden = true; $('report').hidden = false; $('refresh').hidden = false;
+  }
+
+  async function load(){
+    const u = Platform.user();
+    $('acct').hidden = false; $('acct').textContent = u ? u.username : 'Войти';
+    if (!u) return guest();
+    $('refresh').disabled = true;
+    try {
+      const { data, error } = await Platform.client.rpc('platform_stats');
+      if (error){
+        if (/forbidden|42501|permission/i.test((error.message || '') + (error.code || ''))) return forbidden(u);
+        throw error;
+      }
+      render(data);
+    } catch(e){
+      show(`<h2>Не получилось загрузить</h2><p>${esc((e && e.message) || 'нет связи')}</p><button class="btn" id="go" type="button">Ещё раз</button>`);
+      $('go').onclick = load;
+    } finally { $('refresh').disabled = false; }
+  }
+
+  $('acct').onclick = () => Platform.login();
+  $('refresh').onclick = load;
+  Platform.ready.then(load);
+  Platform.onChange(load);
+})();
+</script>
+</body>
+</html>
