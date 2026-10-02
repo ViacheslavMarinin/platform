@@ -102,6 +102,21 @@
     setUser(null);
   }
 
+  // ---------- прогресс игры (таблица saves: игрок + игра → данные) ----------
+  async function load(){
+    await ready; if (!sb || !user) return null;
+    const { data, error } = await sb.from('saves').select('data,updated_at').eq('user_id', user.id).eq('app', APP).maybeSingle();
+    if (error) throw error;
+    return data;                             // { data, updated_at } или null
+  }
+  async function save(data){
+    await ready; if (!sb || !user) throw new Error('не вошёл');
+    const now = new Date().toISOString();
+    const { error } = await sb.from('saves').upsert({ user_id: user.id, app: APP, data, updated_at: now }, { onConflict: 'user_id,app' });
+    if (error) throw error;
+    return now;
+  }
+
   // ---------- окно входа ----------
   const DUCK = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="56" rx="22" ry="3.5" fill="#000" opacity=".12"/><path d="M8 38c0-7 6-11 13-11h6c-3-3-5-6-5-10 0-7 6-12 13-12s13 5 13 12c0 4-2 7-5 9 5 2 9 6 9 12 0 9-9 16-22 16S8 47 8 38z" fill="#ffd23f"/><path d="M12 40c4 7 13 10 22 9 7-1 12-4 14-8-4 3-10 5-17 5-8 0-15-2-19-6z" fill="#f2b705"/><path d="M20 34c3 4 9 6 15 5-2 3-9 4-14 1-2-1-2-4-1-6z" fill="#f2b705"/><path d="M46 19c5-1 10 0 12 2-2 3-7 4-12 3z" fill="#ff8a1f"/><circle cx="40" cy="15" r="2.6" fill="#2b1d0e"/><circle cx="40.9" cy="14.1" r=".9" fill="#fff"/><path d="M22 11c1-6 8-10 15-9 6 1 10 5 10 9-8-2-17-2-25 0z" fill="#e63946"/><path d="M21 11.5c8-2.5 18-2.5 27-.5l-.5 2.5c-8-2-17-2-26 .5z" fill="#b5172a"/><circle cx="34" cy="2.8" r="2.6" fill="#fff"/></svg>';
   const CSS = `
@@ -205,6 +220,8 @@
     onChange(fn){ subs.add(fn); return () => subs.delete(fn); },  // вход, выход, смена игрока
     login: mode => open(mode),               // окно входа ('login' | 'reg'); для вошедшего — карточка с выходом
     logout,
+    load,                                    // прогресс этой игры из облака: { data, updated_at } | null
+    save,                                    // сохранить прогресс этой игры, вернёт время сохранения
     get client(){ return sb; }               // клиент Supabase для своих таблиц игры
   });
 })();
