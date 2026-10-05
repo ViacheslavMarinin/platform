@@ -58,7 +58,11 @@ body{
 
 .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 40px}
 
-.topbar{display:flex;justify-content:flex-end;gap:8px;min-height:36px}
+.topbar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-height:36px}
+.acct.ducks{cursor:default;font-variant-numeric:tabular-nums;color:#7a5a00}
+.acct.ducks img{width:22px;height:22px;margin:-3px 0}
+.acct.ducks.pop{animation:pop .5s ease}
+@keyframes pop{40%{transform:scale(1.15)}}
 .admin-link{text-decoration:none}
 header{display:flex;align-items:center;gap:14px;padding:4px 0 26px}
 header .titles{flex:1;min-width:0}
@@ -109,6 +113,9 @@ h2{font-weight:800;font-size:20px;margin:0 0 12px 4px}
   font-size:14px;color:var(--ink-soft);line-height:1.4;
 }
 .note img{width:36px;height:36px;flex:none}
+button.note{width:100%;border:0;font:inherit;text-align:left;cursor:pointer}
+button.note b{color:var(--ink)}
+button.note.in{cursor:default}
 .site-about{margin-top:30px;padding:0 4px;color:var(--ink-soft);font-size:14px;line-height:1.5}
 .site-about h2{color:var(--ink);font-size:17px;margin:0 0 8px}
 .site-about p{margin:0 0 10px}
@@ -125,6 +132,7 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
         <span>Сводка</span>
       </a>
+      <span class="acct ducks" id="ducks" title="Уточки — общая награда для всех игр" hidden><img src="/img/duck.svg" alt="Уточки"><span>0</span></span>
       <button class="acct" id="acct" type="button" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-4 4.2-6 7.5-6s6.3 2 7.5 6"/></svg>
         <span>Войти</span>
@@ -166,10 +174,10 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
       </div>
     </div>
 
-    <div class="note">
+    <button class="note" id="note" type="button">
       <img src="/img/duck.svg" alt="">
-      <span>Скоро здесь появятся уточки — общая награда за все игры.</span>
-    </div>
+      <span id="noteText">Зарегистрируйся и получи <b>1000 уточек</b> — общую награду для всех игр.</span>
+    </button>
   </main>
 
   <section class="site-about">
@@ -196,6 +204,30 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
   Platform.ready.then(show);
   Platform.onChange(show);
   b.addEventListener('click', () => Platform.login());
+
+  // уточки: баланс у вошедшего, приглашение для гостя
+  const d = document.getElementById('ducks'), dn = d.querySelector('span');
+  const note = document.getElementById('note'), nt = document.getElementById('noteText');
+  const fmt = n => Number(n || 0).toLocaleString('ru-RU');
+  const word = n => { const a = Math.abs(n) % 100, c = a % 10; return a > 10 && a < 20 ? 'уточек' : c === 1 ? 'уточка' : c >= 2 && c <= 4 ? 'уточки' : 'уточек'; };
+  let last = null;
+  const showDucks = bal => {
+    const u = Platform.user(), n = bal && bal.duck != null ? +bal.duck : null;
+    d.hidden = !u || n == null;
+    if (n != null){
+      dn.textContent = fmt(n);
+      if (last != null && n !== last){ d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop'); }
+      last = n;
+    } else last = null;
+    note.classList.toggle('in', !!u);
+    nt.innerHTML = !u ? 'Зарегистрируйся и получи <b>1000 уточек</b> — общую награду для всех игр.'
+      : n == null ? 'Уточки — общая награда для всех игр.'
+      : `У тебя <b>${fmt(n)} ${word(n)}</b>. Скоро их можно будет обменивать на монеты и бонусы в играх.`;
+  };
+  Platform.onWallet(showDucks);
+  Platform.onChange(() => showDucks(Platform.balances()));
+  Platform.ready.then(() => showDucks(Platform.balances()));
+  note.addEventListener('click', () => { if (!Platform.user()) Platform.login('reg'); });
 })();
 // Пузырьки в фоне: немного, лёгкие
 (function(){

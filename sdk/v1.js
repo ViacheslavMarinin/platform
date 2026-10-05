@@ -36,6 +36,7 @@
     const next = view(u), prev = user;
     user = next;
     if ((prev && prev.id) !== (next && next.id) || (prev && prev.username) !== (next && next.username)) subs.forEach(fn => { try { fn(user); } catch(e){ console.error(e); } });
+    if ((prev && prev.id) !== (next && next.id)) queueMicrotask(autoWallet);
   }
 
   function loadLib(){
@@ -117,6 +118,34 @@
     return now;
   }
 
+  // ---------- кошелёк: уточки (функция wallet на сервере; там же разовый подарок 1000 уточек) ----------
+  let balances = null, walletFor = null;
+  const wsubs = new Set();
+  const GIFT_KEY = 'mlymir-gift';   // подарок показан не до конца (перезагрузка) — покажем ещё раз
+  function setBalances(b){
+    balances = b;
+    wsubs.forEach(fn => { try { fn(balances); } catch(e){ console.error(e); } });
+  }
+  async function wallet(){
+    await ready; if (!sb || !user) return null;
+    const uid = user.id;
+    const { data, error } = await sb.rpc('wallet');
+    if (error) throw error;
+    if (!user || user.id !== uid) return null;
+    if (data && data.welcome > 0){ LS.set(GIFT_KEY, uid + ':' + data.welcome); celebrate(data.welcome); }
+    setBalances((data && data.balances) || {});
+    return balances;
+  }
+  // при входе тихо открываем кошелёк: так подарок получают все, где бы они ни вошли
+  function autoWallet(){
+    if (!user){ walletFor = null; if (balances) setBalances(null); return; }
+    if (walletFor === user.id) return;
+    walletFor = user.id;
+    const g = (LS.get(GIFT_KEY) || '').split(':');
+    if (g[0] === user.id && +g[1] > 0) celebrate(+g[1]);
+    wallet().catch(e => { walletFor = null; console.warn('[platform] wallet', e && e.message); });
+  }
+
   // ---------- админ (таблица admins; игрок видит только свою строку) ----------
   let adminFor = null, adminP = null;
   async function isAdmin(){
@@ -152,8 +181,20 @@
   .mm-btn.pri{background:#ffd23f;color:#3a2a00;box-shadow:0 2px 0 #e0a800}
   .mm-btn:disabled{opacity:.6;cursor:default}
   .mm-note{margin:12px 0 0;font-size:12px;color:#4d6b7a;text-align:center}
+  .mm-gift{text-align:center}
+  .mm-gift svg{width:120px;height:120px;display:block;margin:-6px auto 4px;animation:mm-bob 1.6s ease-in-out infinite;transform-origin:50% 90%}
+  .mm-gift small{display:block;color:#4d6b7a;font-size:13px}
+  .mm-gnum{display:block;font-weight:800;font-size:54px;line-height:1.05;color:#e0a100;font-variant-numeric:tabular-nums;margin-top:6px}
+  .mm-gift .mm-gw{display:block;font-weight:800;font-size:18px;margin-bottom:4px}
+  .mm-gift .mm-btn{margin-top:16px;width:100%}
+  .mm-bal{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 12px;font-weight:800;font-size:16px}
+  .mm-bal svg{width:24px;height:24px}
+  @keyframes mm-bob{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-4px)}}
+  @media (prefers-reduced-motion:reduce){.mm-gift svg{animation:none}}
   `;
-  let ov = null, tab = 'login', busy = false, err = '', armed = false, resolveOpen = null;
+  let ov = null, tab = 'login', busy = false, err = '', armed = false, resolveOpen = null, gift = 0;
+  const fmt = n => Number(n || 0).toLocaleString('ru-RU');
+  const ducksWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'уточек' : b === 1 ? 'уточка' : b >= 2 && b <= 4 ? 'уточки' : 'уточек'; };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 
   function mount(){
@@ -163,12 +204,27 @@
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-modal="true"></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
-    ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user){ e.preventDefault(); submit(); } if (e.key === 'Escape') close(); });
+    ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user && !gift){ e.preventDefault(); submit(); } if (e.key === 'Escape') close(); });
   }
   function render(){
     const card = ov.firstChild;
+    if (gift){
+      card.innerHTML = `<div class="mm-gift">${DUCK}<small>Подарок от Моего маленького мира</small>
+        <b class="mm-gnum" data-to="${gift}">+${fmt(gift)}</b><span class="mm-gw">${ducksWord(gift)} тебе!</span>
+        <p class="mm-note">Уточки — общая награда для всех игр платформы. Скоро их можно будет обменивать на монеты и бонусы в играх.</p>
+        <button class="mm-btn pri" data-a="close">Ура!</button></div>`;
+      const el = card.querySelector('.mm-gnum');
+      if (!window.matchMedia || !matchMedia('(prefers-reduced-motion: reduce)').matches){
+        const t0 = performance.now(), D = 900;
+        const to = gift, step = t => { const k = Math.min(1, (t - t0) / D), v = Math.round(to * (1 - Math.pow(1 - k, 3))); el.textContent = '+' + fmt(v); if (k < 1) requestAnimationFrame(step); };
+        el.textContent = '+0'; requestAnimationFrame(step);
+        setTimeout(() => { el.textContent = '+' + fmt(to); }, D + 120);   // если вкладка в фоне и анимация не шла
+      }
+      return;
+    }
     if (user){
       card.innerHTML = `<div class="mm-top">${DUCK}<div><small>Мой маленький мир</small><b>Привет, ${esc(user.username)}!</b></div></div>
+        ${balances && balances.duck != null ? `<p class="mm-bal">${DUCK}${fmt(balances.duck)} ${ducksWord(balances.duck)}</p>` : ''}
         <p class="mm-note" style="margin:0 0 14px">Ты вошёл во все игры платформы сразу.</p>
         <div class="mm-row"><button class="mm-btn" data-a="logout">${armed ? 'Точно выйти?' : 'Выйти'}</button><button class="mm-btn pri" data-a="close">Готово</button></div>`;
       return;
@@ -182,7 +238,7 @@
       </form>
       <p class="mm-err">${esc(err)}</p>
       <div class="mm-row"><button class="mm-btn" data-a="close">Позже</button><button class="mm-btn pri" data-a="submit" ${busy ? 'disabled' : ''}>${busy ? 'Секунду…' : reg ? 'Создать' : 'Войти'}</button></div>
-      <p class="mm-note">Один аккаунт для всех игр. Логин и пароль из Пико тоже подходят.</p>`;
+      <p class="mm-note">${reg ? 'Новым игрокам — <b>1000 уточек</b> в подарок. ' : ''}Один аккаунт для всех игр. Логин и пароль из Пико тоже подходят.</p>`;
   }
   const field = n => ov.querySelector(`[data-f="${n}"]`);
   async function submit(){
@@ -194,7 +250,9 @@
     busy = true; err = ''; render(); field('login').value = login; field('pass').value = pass;
     try {
       if (tab === 'reg') await signUp(login, pass); else await signIn(login, pass);
-      busy = false; close();
+      busy = false;
+      // подарок мог прийти раньше, чем закончилась регистрация, — его окно не трогаем
+      if (gift) settle(); else close();
     } catch(e){
       busy = false; err = errText(e); render(); field('login').value = login;
     }
@@ -212,14 +270,20 @@
     }
   }
   function open(mode){
-    mount(); armed = false; err = ''; busy = false;
+    mount(); armed = false; err = ''; busy = false; gift = 0;
     if (mode === 'reg' || mode === 'login') tab = mode;
     render(); ov.hidden = false;
     const f = !user && field('login'); if (f) setTimeout(() => f.focus(), 30);
     return new Promise(res => { resolveOpen = res; });
   }
+  function celebrate(n){
+    mount(); gift = n; busy = false; armed = false;
+    render(); ov.hidden = false;
+  }
+  function settle(){ if (resolveOpen){ const r = resolveOpen; resolveOpen = null; r(user); } }
   function close(){
     if (!ov) return;
+    if (gift){ gift = 0; LS.set(GIFT_KEY, ''); }
     ov.hidden = true;
     if (resolveOpen){ const r = resolveOpen; resolveOpen = null; r(user); }
   }
@@ -235,6 +299,9 @@
     load,                                    // прогресс этой игры из облака: { data, updated_at } | null
     save,                                    // сохранить прогресс этой игры, вернёт время сохранения
     isAdmin,                                 // Promise<boolean>: вошедший игрок — админ платформы
+    wallet,                                  // Promise<{ duck: число, … }> — балансы с сервера (null для гостя)
+    balances: () => balances,                // последние известные балансы или null
+    onWallet(fn){ wsubs.add(fn); return () => wsubs.delete(fn); },  // балансы изменились
     get client(){ return sb; }               // клиент Supabase для своих таблиц игры
   });
 })();
