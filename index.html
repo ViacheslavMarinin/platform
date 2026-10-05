@@ -176,7 +176,7 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
 
     <button class="note" id="note" type="button">
       <img src="/img/duck.svg" alt="">
-      <span id="noteText">Зарегистрируйся и получи <b>1000 уточек</b> — общую награду для всех игр.</span>
+      <span id="noteText">Зарегистрируйся и получи <b>100 уточек</b> — общую награду для всех игр.</span>
     </button>
   </main>
 
@@ -220,7 +220,7 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
       last = n;
     } else last = null;
     note.classList.toggle('in', !!u);
-    nt.innerHTML = !u ? 'Зарегистрируйся и получи <b>1000 уточек</b> — общую награду для всех игр.'
+    nt.innerHTML = !u ? 'Зарегистрируйся и получи <b>100 уточек</b> — общую награду для всех игр.'
       : n == null ? 'Уточки — общая награда для всех игр.'
       : `У тебя <b>${fmt(n)} ${word(n)}</b>. Скоро их можно будет обменивать на монеты и бонусы в играх.`;
   };

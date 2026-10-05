@@ -59,6 +59,26 @@ tr:last-child td{border-bottom:0}
 .state img{width:72px;height:72px;margin-bottom:10px}
 .state p{color:var(--ink-2);margin:6px 0 16px}
 [hidden]{display:none!important}
+.small{font-size:12px}
+.ducks-card .dh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.ducks-card h2{display:flex;align-items:center;gap:8px;margin:0}
+.ducks-card h2 img,.gcard h2 img{width:26px;height:26px}
+.dstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+.dstats>div{background:#fff8dc;border-radius:14px;padding:10px 12px;min-width:0}
+@media (max-width:640px){.dstats{gap:6px}.dstats>div{padding:8px 10px}.dstats .v{font-size:18px}.dstats .l{font-size:11px;line-height:1.25}}
+.dstats .l{color:var(--ink-2);font-size:12px}
+.dstats .v{font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+td .gift{border:0;background:#fff3b0;border-radius:999px;padding:4px 10px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;color:#3a2a00}
+td.duck{white-space:nowrap}
+.gov{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,35,48,.5)}
+.gcard{width:100%;max-width:360px;margin:0}
+.gcard h2{display:flex;align-items:center;gap:8px}
+.gcard label{display:block;font-size:12px;font-weight:800;color:var(--ink-2);margin-bottom:10px}
+.gcard input{display:block;width:100%;margin-top:4px;font:inherit;font-weight:700;font-size:16px;padding:10px 12px;border-radius:12px;border:1.5px solid #cfe3ea;background:#fff;color:var(--ink)}
+.chips{display:flex;gap:6px;margin:-4px 0 12px}
+.chips button{flex:1;border:0;border-radius:999px;padding:7px 0;font:inherit;font-weight:800;background:#e6f4f8;color:var(--ink);cursor:pointer}
+.gerr{min-height:18px;color:#c62f45;font-size:13px;font-weight:700;text-align:center;margin:0 0 8px}
+.grow{display:flex;gap:8px}.grow .btn{flex:1}
 </style>
 </head>
 <body>
@@ -80,9 +100,27 @@ tr:last-child td{border-bottom:0}
       <div class="card"><h2>Регистрации</h2><p class="tot" id="totNew"></p><div class="chart" id="chNew"></div></div>
       <div class="card"><h2>Играли</h2><p class="tot" id="totAct"></p><div class="chart" id="chAct"></div></div>
     </div>
-    <div class="card" style="margin-top:14px"><h2>Игры</h2><div class="scroll"><table id="apps"></table></div></div>
+    <div class="card ducks-card" style="margin-top:14px">
+      <div class="dh"><h2><img src="/img/duck.svg" alt="">Уточки</h2><button class="btn pri" id="giftBtn" type="button">Подарить уточки</button></div>
+      <div class="dstats" id="dstats"></div>
+      <p class="muted small">Уточки нельзя заработать в играх: только твой подарок (а позже — покупка). Курс: 1 уточка = 10 монет в любой игре.</p>
+    </div>
+    <div class="card"><h2>Игры</h2><div class="scroll"><table id="apps"></table></div></div>
     <div class="card"><h2>Игроки</h2><div class="scroll"><table id="players"></table></div></div>
   </main>
+</div>
+
+<div class="gov" id="giftOv" hidden>
+  <div class="card gcard" role="dialog" aria-modal="true" aria-labelledby="gH">
+    <h2 id="gH"><img src="/img/duck.svg" alt="">Подарить уточки</h2>
+    <label>Логин игрока<input id="gUser" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label>Сколько уточек<input id="gAmt" type="number" inputmode="numeric" step="1"></label>
+    <div class="chips" id="gChips"><button type="button" data-v="50">50</button><button type="button" data-v="100">100</button><button type="button" data-v="500">500</button><button type="button" data-v="1000">1000</button></div>
+    <label>За что (видно в журнале)<input id="gNote" maxlength="60" placeholder="например, за помощь в тестах"></label>
+    <p class="gerr" id="gErr"></p>
+    <div class="grow"><button class="btn" id="gCancel" type="button">Отмена</button><button class="btn pri" id="gGo" type="button">Подарить</button></div>
+    <p class="muted small">Чтобы забрать уточки, введи отрицательное число. Больше, чем есть у игрока, забрать нельзя.</p>
+  </div>
 </div>
 
 <script src="/sdk/v1.js" data-app="platform"></script>
@@ -160,12 +198,14 @@ tr:last-child td{border-bottom:0}
     draw(); window.onresize = () => { clearTimeout(window._rt); window._rt = setTimeout(draw, 150); };
     $('apps').innerHTML = '<tr><th>Игра</th><th class="n">Игроков</th><th class="n">Играли за 7 дней</th></tr>' +
       s.apps.map(a => `<tr><td>${esc(a.title)}</td><td class="n">${num(a.players)}</td><td class="n">${num(a.active_7d)}</td></tr>`).join('');
+    const dst = (l, v) => `<div><div class="l">${l}</div><div class="v">${num(v)}</div></div>`;
+    $('dstats').innerHTML = dst('У игроков сейчас', t.ducks_total) + dst('Подарено всего', t.ducks_gifted) + dst('Обменяно на монеты', t.ducks_spent);
     const codes = s.apps.map(a => a.code);
     const titles = Object.fromEntries(s.apps.map(a => [a.code, a.title]));
-    $('players').innerHTML = '<tr><th>Логин</th><th>Регистрация</th><th>Последний раз</th><th>Игры</th></tr>' +
+    $('players').innerHTML = '<tr><th>Логин</th><th>Регистрация</th><th>Последний раз</th><th>Игры</th><th class="n">Уточки</th></tr>' +
       s.players.map(p => {
         const g = Object.entries(p.games || {}).map(([c, v]) => esc((titles[c] || c).split(' ')[0]) + (v.level ? ` · ур. ${esc(v.level)}` : '')).join('<br>') || '<span class="muted">не играл</span>';
-        return `<tr><td><b>${esc(p.username)}</b></td><td>${day(p.created)}</td><td>${when(p.last_seen)}</td><td>${g}</td></tr>`;
+        return `<tr><td><b>${esc(p.username)}</b></td><td>${day(p.created)}</td><td>${when(p.last_seen)}</td><td>${g}</td><td class="n duck">${num(p.ducks)} <button class="gift" type="button" data-user="${esc(p.username)}" title="Подарить уточки">+</button></td></tr>`;
       }).join('');
     $('msg').hidden = true; $('report').hidden = false; $('refresh').hidden = false;
   }
@@ -186,6 +226,42 @@ tr:last-child td{border-bottom:0}
       show(`<h2>Не получилось загрузить</h2><p>${esc((e && e.message) || 'нет связи')}</p><button class="btn" id="go" type="button">Ещё раз</button>`);
       $('go').onclick = load;
     } finally { $('refresh').disabled = false; }
+  }
+
+  // ---------- подарок уточек ----------
+  function openGift(user){
+    $('gUser').value = user || ''; $('gAmt').value = 100; $('gNote').value = ''; $('gErr').textContent = '';
+    $('gGo').disabled = false; $('gGo').textContent = 'Подарить';
+    $('giftOv').hidden = false; setTimeout(() => (user ? $('gAmt') : $('gUser')).focus(), 30);
+  }
+  const closeGift = () => { $('giftOv').hidden = true; };
+  $('giftBtn').onclick = () => openGift('');
+  $('players').addEventListener('click', e => { const b = e.target.closest('[data-user]'); if (b) openGift(b.dataset.user); });
+  $('gChips').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b){ $('gAmt').value = b.dataset.v; } });
+  $('gCancel').onclick = closeGift;
+  $('giftOv').addEventListener('click', e => { if (e.target === $('giftOv')) closeGift(); });
+  $('giftOv').addEventListener('keydown', e => { if (e.key === 'Escape') closeGift(); if (e.key === 'Enter') $('gGo').click(); });
+  $('gGo').onclick = async () => {
+    const user = $('gUser').value.trim(), amt = Math.trunc(+$('gAmt').value), note = $('gNote').value.trim();
+    if (!user) return $('gErr').textContent = 'Укажи логин игрока';
+    if (!amt) return $('gErr').textContent = 'Укажи число уточек (не ноль)';
+    $('gGo').disabled = true; $('gGo').textContent = 'Секунду…'; $('gErr').textContent = '';
+    try {
+      const { data, error } = await Platform.client.rpc('admin_grant', { p_username: user, p_ducks: amt, p_note: note || null });
+      if (error) throw error;
+      closeGift();
+      showToast(`${data.ducks > 0 ? '+' : ''}${num(data.ducks)} уточек → ${data.username}. Теперь у игрока ${num(data.balance)}`);
+      load();
+    } catch(e){
+      const m = ((e && e.message) || '').toLowerCase();
+      $('gErr').textContent = m.includes('no such player') ? 'Нет игрока с таким логином' : m.includes('not enough') ? 'У игрока нет столько уточек' : m.includes('forbidden') ? 'Нет прав админа' : 'Не получилось: ' + ((e && e.message) || 'нет связи');
+      $('gGo').disabled = false; $('gGo').textContent = 'Подарить';
+    }
+  };
+  function showToast(t){
+    const el = document.createElement('div'); el.textContent = t;
+    el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:#1f3a4a;color:#fff;font-weight:800;font-size:14px;padding:10px 16px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.3);max-width:calc(100% - 32px);text-align:center';
+    document.body.appendChild(el); setTimeout(() => el.remove(), 3500);
   }
 
   $('acct').onclick = () => Platform.login();

@@ -1,6 +1,6 @@
 -- Мой маленький мир — кошелёк: уточки, журнал операций, балансы, приветственный подарок
 -- Выполнить один раз: Supabase → SQL Editor → New query → вставить → Run.
--- Повторный запуск безопасен.
+-- Повторный запуск безопасен. Актуальная версия функций — в 005_exchange.sql.
 
 -- Валюты: уточки (общая) и, позже, валюты игр
 create table if not exists public.currencies (
@@ -50,15 +50,25 @@ set search_path = public
 as $$
 declare bal bigint;
 begin
+  if p_amount < 0 then
+    -- списание: строка баланса блокируется до конца операции, в минус уйти нельзя
+    update balances set amount = amount + p_amount
+      where user_id = p_user and currency = p_currency and amount + p_amount >= 0
+      returning amount into bal;
+    if not found then
+      raise exception 'not enough' using errcode = '23514';   -- check_violation
+    end if;
+  else
+    insert into balances (user_id, currency, amount) values (p_user, p_currency, p_amount)
+      on conflict (user_id, currency) do update set amount = balances.amount + excluded.amount
+      returning amount into bal;
+  end if;
   insert into ledger (user_id, currency, amount, reason, app) values (p_user, p_currency, p_amount, p_reason, p_app);
-  insert into balances (user_id, currency, amount) values (p_user, p_currency, p_amount)
-    on conflict (user_id, currency) do update set amount = balances.amount + excluded.amount
-    returning amount into bal;
   return bal;
 end $$;
 revoke all on function public.ledger_add(uuid, text, integer, text, text) from public, anon, authenticated;
 
--- Кошелёк игрока. При первом обращении дарит 1000 уточек (один раз на аккаунт).
+-- Кошелёк игрока. При первом обращении дарит 100 уточек (один раз на аккаунт).
 create or replace function public.wallet()
 returns jsonb
 language plpgsql
@@ -74,8 +84,8 @@ begin
   end if;
   if not exists (select 1 from ledger where user_id = uid and reason = 'once:welcome') then
     begin
-      perform ledger_add(uid, 'duck', 1000, 'once:welcome');
-      gift := 1000;
+      perform ledger_add(uid, 'duck', 100, 'once:welcome');
+      gift := 100;
     exception when unique_violation then
       gift := 0;   -- подарок уже выдан параллельным запросом
     end;

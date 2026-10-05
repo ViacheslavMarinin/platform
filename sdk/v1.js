@@ -146,6 +146,32 @@
     wallet().catch(e => { walletFor = null; console.warn('[platform] wallet', e && e.message); });
   }
 
+  // ---------- обмен уточек на монеты этой игры (только в одну сторону) ----------
+  let rateP = null;
+  function rate(){   // сколько монет игры дают за 1 уточку (таблица currencies)
+    if (!rateP) rateP = ready.then(async () => {
+      if (!sb) return null;
+      const { data, error } = await sb.from('currencies').select('per_duck').eq('app', APP).not('per_duck', 'is', null).limit(1).maybeSingle();
+      if (error || !data) { rateP = null; return null; }
+      return data.per_duck;
+    }).catch(() => { rateP = null; return null; });
+    return rateP;
+  }
+  async function exchange(ducks){
+    await ready; if (!sb || !user) throw new Error('не вошёл');
+    const { data, error } = await sb.rpc('exchange', { p_app: APP, p_ducks: ducks });
+    if (error) throw error;
+    setBalances(data.balances || {});
+    return { id: data.id, coins: data.coins, ducks: data.ducks };
+  }
+  // все покупки монет за уточки в этой игре: [{ id, coins }] — игра зачисляет те, которых у неё ещё нет
+  async function credits(){
+    await ready; if (!sb || !user) return [];
+    const { data, error } = await sb.from('ledger').select('id,amount').eq('reason', 'exchange').eq('app', APP).gt('amount', 0).order('id');
+    if (error) throw error;
+    return (data || []).map(r => ({ id: r.id, coins: r.amount }));
+  }
+
   // ---------- админ (таблица admins; игрок видит только свою строку) ----------
   let adminFor = null, adminP = null;
   async function isAdmin(){
@@ -189,10 +215,25 @@
   .mm-gift .mm-btn{margin-top:16px;width:100%}
   .mm-bal{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 12px;font-weight:800;font-size:16px}
   .mm-bal svg{width:24px;height:24px}
+  .mm-x small{display:block}
+  .mm-xbal{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:22px;margin:2px 0 2px}
+  .mm-xbal svg{width:30px;height:30px}
+  .mm-xrate{text-align:center;color:#4d6b7a;font-size:13px;margin:0 0 12px}
+  .mm-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .mm-opt{display:flex;align-items:center;gap:10px;width:100%;border:2px solid #e6f4f8;background:#fff;border-radius:16px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:15px;color:#1f3a4a;cursor:pointer;text-align:left}
+  .mm-opt .d{display:flex;align-items:center;gap:4px;font-weight:800;min-width:74px}
+  .mm-opt .d svg{width:22px;height:22px}
+  .mm-opt .a{color:#9aaab3;font-weight:800}
+  .mm-opt .c{flex:1;text-align:right;font-weight:800}
+  .mm-opt.need{border-color:#ffd23f;background:#fffbea}
+  .mm-opt.on{border-color:#1f86b8;background:#eef8fc}
+  .mm-opt:disabled{opacity:.45;cursor:default}
+  .mm-opt small{display:block;font-size:11px;color:#7a5a00;font-weight:800}
   @keyframes mm-bob{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-4px)}}
   @media (prefers-reduced-motion:reduce){.mm-gift svg{animation:none}}
   `;
   let ov = null, tab = 'login', busy = false, err = '', armed = false, resolveOpen = null, gift = 0;
+  let xs = null;   // окно обмена: { need, rate, pick, done, err, resolve }
   const fmt = n => Number(n || 0).toLocaleString('ru-RU');
   const ducksWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'уточек' : b === 1 ? 'уточка' : b >= 2 && b <= 4 ? 'уточки' : 'уточек'; };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
@@ -206,8 +247,41 @@
     ov.addEventListener('click', onClick);
     ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user && !gift){ e.preventDefault(); submit(); } if (e.key === 'Escape') close(); });
   }
+  const coinsWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'монет' : b === 1 ? 'монета' : b >= 2 && b <= 4 ? 'монеты' : 'монет'; };
+  function renderX(card){
+    const r = xs.rate, have = balances && balances.duck != null ? +balances.duck : 0;
+    const top = `<div class="mm-top">${DUCK}<div><small>Мой маленький мир</small><b>Монеты за уточки</b></div></div>`;
+    if (!user){
+      card.innerHTML = top + `<p class="mm-note" style="margin:0 0 14px">Войди в аккаунт, чтобы обменять уточки на монеты.</p>
+        <div class="mm-row"><button class="mm-btn" data-a="close">Закрыть</button><button class="mm-btn pri" data-a="xlogin">Войти</button></div>`;
+      return;
+    }
+    if (xs.done){
+      card.innerHTML = `<div class="mm-gift">${DUCK}<small>Обмен прошёл</small><b class="mm-gnum">+${fmt(xs.done.coins)}</b><span class="mm-gw">${coinsWord(xs.done.coins)}</span>
+        <p class="mm-note">Осталось ${fmt(have)} ${ducksWord(have)}.</p><button class="mm-btn pri" data-a="close">Отлично!</button></div>`;
+      return;
+    }
+    if (!r){
+      card.innerHTML = top + `<p class="mm-note" style="margin:0 0 14px">${xs.loading ? 'Секунду…' : 'В этой игре обмен пока не работает.'}</p>
+        <div class="mm-row"><button class="mm-btn" data-a="close">Закрыть</button></div>`;
+      return;
+    }
+    const opts = [];
+    if (xs.need > 0){ const d = Math.ceil(xs.need / r); opts.push({ d, need: true }); }
+    [10, 30, 100].forEach(d => { if (!opts.some(o => o.d === d)) opts.push({ d }); });
+    if (xs.pick == null){ const first = opts.find(o => o.d <= have); xs.pick = first ? first.d : null; }
+    const pick = opts.find(o => o.d === xs.pick && o.d <= have);
+    card.innerHTML = top + `<div class="mm-xbal">${DUCK}${fmt(have)}</div>
+      <p class="mm-xrate">1 уточка = ${fmt(r)} ${coinsWord(r)} · обратно не меняется</p>
+      <div class="mm-opts">${opts.map(o => `<button type="button" class="mm-opt${o.need ? ' need' : ''}${pick && o.d === pick.d ? ' on' : ''}" data-x="${o.d}" ${o.d > have ? 'disabled' : ''}>
+        <span class="d">${DUCK}${fmt(o.d)}</span><span class="a">→</span><span class="c">${o.need ? '<small>не хватает</small>' : ''}${fmt(o.d * r)} ${coinsWord(o.d * r)}</span></button>`).join('')}</div>
+      ${have < (opts[0] ? opts[0].d : 1) && !pick ? '<p class="mm-note" style="margin:-4px 0 12px">Уточек пока не хватает. Их дарит Мой маленький мир.</p>' : ''}
+      <p class="mm-err">${esc(xs.err || '')}</p>
+      <div class="mm-row"><button class="mm-btn" data-a="close">Не сейчас</button><button class="mm-btn pri" data-a="xgo" ${!pick || busy ? 'disabled' : ''}>${busy ? 'Секунду…' : pick ? `Обменять ${fmt(pick.d)}` : 'Обменять'}</button></div>`;
+  }
   function render(){
     const card = ov.firstChild;
+    if (xs) return renderX(card);
     if (gift){
       card.innerHTML = `<div class="mm-gift">${DUCK}<small>Подарок от Моего маленького мира</small>
         <b class="mm-gnum" data-to="${gift}">+${fmt(gift)}</b><span class="mm-gw">${ducksWord(gift)} тебе!</span>
@@ -238,7 +312,7 @@
       </form>
       <p class="mm-err">${esc(err)}</p>
       <div class="mm-row"><button class="mm-btn" data-a="close">Позже</button><button class="mm-btn pri" data-a="submit" ${busy ? 'disabled' : ''}>${busy ? 'Секунду…' : reg ? 'Создать' : 'Войти'}</button></div>
-      <p class="mm-note">${reg ? 'Новым игрокам — <b>1000 уточек</b> в подарок. ' : ''}Один аккаунт для всех игр. Логин и пароль из Пико тоже подходят.</p>`;
+      <p class="mm-note">${reg ? 'Новым игрокам — <b>100 уточек</b> в подарок. ' : ''}Один аккаунт для всех игр. Логин и пароль из Пико тоже подходят.</p>`;
   }
   const field = n => ov.querySelector(`[data-f="${n}"]`);
   async function submit(){
@@ -258,10 +332,27 @@
     }
   }
   async function onClick(e){
+    const x = e.target.closest('[data-x]'); if (x && xs && !busy && !x.disabled){ xs.pick = +x.dataset.x; xs.err = ''; render(); return; }
     const t = e.target.closest('[data-tab]'); if (t && !busy){ tab = t.dataset.tab; err = ''; render(); field('login').focus(); return; }
     const a = e.target.closest('[data-a]');
     if (!a){ if (e.target === ov && !busy) close(); return; }
     const act = a.dataset.a;
+    if (act === 'xlogin'){
+      // после входа то же окно обмена открывается снова и отвечает тому же вызову игры
+      const x = xs; xs = null;
+      open('login').then(u => { if (u) startX(x.need, x.resolve); else x.resolve(null); });
+      return;
+    }
+    if (act === 'xgo'){
+      if (busy || !xs || xs.pick == null) return;
+      busy = true; xs.err = ''; render();
+      try { xs.done = await exchange(xs.pick); }
+      catch(e){
+        const m = ((e && e.message) || '').toLowerCase();
+        xs.err = m.includes('not enough') ? 'Не хватает уточек' : m.includes('fetch') || m.includes('network') ? 'Нет связи с сервером. Попробуй ещё раз' : 'Не получилось: ' + ((e && e.message) || 'ошибка');
+      }
+      busy = false; render(); return;
+    }
     if (act === 'close') close();
     else if (act === 'submit') submit();
     else if (act === 'logout'){
@@ -269,14 +360,31 @@
       await logout(); close();
     }
   }
+  // окно «Монеты за уточки». need — сколько монет не хватает (0 — просто обмен).
+  // Возвращает { id, coins, ducks } после обмена или null. Монеты зачисляет игра (и запоминает id).
+  function buyCoins(opts){
+    const need = Math.max(0, Math.ceil(+(opts && opts.need) || 0));
+    if (xs) return Promise.resolve(null);
+    return new Promise(res => startX(need, res));
+  }
+  function startX(need, resolve){
+    mount(); busy = false; err = ''; gift = 0;
+    const me = xs = { need, rate: null, pick: null, done: null, err: '', loading: true, resolve };
+    render(); ov.hidden = false;
+    Promise.all([rate(), user ? wallet().catch(() => balances) : null]).then(([r]) => {
+      if (xs !== me) return; xs.rate = r; xs.loading = false; render();
+    });
+  }
   function open(mode){
     mount(); armed = false; err = ''; busy = false; gift = 0;
+    if (xs){ const x = xs; xs = null; x.resolve(null); }
     if (mode === 'reg' || mode === 'login') tab = mode;
     render(); ov.hidden = false;
     const f = !user && field('login'); if (f) setTimeout(() => f.focus(), 30);
     return new Promise(res => { resolveOpen = res; });
   }
   function celebrate(n){
+    if (xs) return;   // подарок покажется при следующем заходе (ключ GIFT_KEY остался)
     mount(); gift = n; busy = false; armed = false;
     render(); ov.hidden = false;
   }
@@ -284,6 +392,7 @@
   function close(){
     if (!ov) return;
     if (gift){ gift = 0; LS.set(GIFT_KEY, ''); }
+    if (xs){ const x = xs; xs = null; ov.hidden = true; x.resolve(x.done || null); return; }
     ov.hidden = true;
     if (resolveOpen){ const r = resolveOpen; resolveOpen = null; r(user); }
   }
@@ -302,6 +411,9 @@
     wallet,                                  // Promise<{ duck: число, … }> — балансы с сервера (null для гостя)
     balances: () => balances,                // последние известные балансы или null
     onWallet(fn){ wsubs.add(fn); return () => wsubs.delete(fn); },  // балансы изменились
+    buyCoins,                                // окно обмена уточек на монеты: Promise<{ id, coins, ducks } | null>
+    credits,                                 // все покупки монет за уточки в этой игре: Promise<[{ id, coins }]>
+    rate,                                    // Promise<число>: монет игры за 1 уточку (null — обмена нет)
     get client(){ return sb; }               // клиент Supabase для своих таблиц игры
   });
 })();
