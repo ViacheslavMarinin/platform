@@ -39,3 +39,16 @@
   to = "https://hamster33.netlify.app/:splat"
   status = 200
   force = true
+
+# Служебные файлы репозитория не отдаём наружу
+[[redirects]]
+  from = "/supabase/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/README.md"
+  to = "/404.html"
+  status = 404
+  force = true
