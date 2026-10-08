@@ -159,6 +159,24 @@ h1.red{color:var(--red)}
 .pbar .home{color:var(--muted);text-decoration:none;font-size:13px;letter-spacing:.04em}
 .pbar .home:hover{color:var(--sand)}
 .pbar .acct{font-family:var(--body);font-weight:500;font-size:13px;border:1px solid rgba(216,194,124,.35);background:rgba(0,0,0,.25);color:var(--khaki);padding:6px 12px;cursor:pointer;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wallet{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:15px;color:var(--sand);font-variant-numeric:tabular-nums}
+.wallet .w{display:flex;align-items:center;gap:6px}
+.coin{display:inline-block;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe9a0,#d6a12a 60%,#8a6114);box-shadow:0 0 0 2px rgba(0,0,0,.35);flex:none}
+.heart{color:#e0473a;font-size:16px;line-height:1}
+.wallet small{font-family:var(--body);font-size:11px;color:var(--muted)}
+#modal{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,8,6,.72);backdrop-filter:blur(2px)}
+#modal .box{width:min(380px,100%);background:var(--panel);border:2px solid rgba(216,194,124,.35);box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center;animation:tIn .35s ease-out both}
+#modal .box .in{padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px;align-items:center}
+#modal h3{margin:0;font-family:var(--display);font-weight:400;font-size:28px;color:var(--khaki);letter-spacing:.03em}
+#modal h3.red{color:var(--red)}
+#modal p{margin:0;color:var(--sand);opacity:.9;font-size:15px;line-height:1.4}
+#modal .big{font-family:var(--display);font-size:40px;color:#ffd27a;display:flex;align-items:center;gap:10px}
+#modal .big .coin{width:30px;height:30px}
+#modal .mb{display:flex;flex-direction:column;gap:8px;width:100%}
+#modal .mb .go{flex:none;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+#modal .mb .go.alt{background:rgba(216,194,124,.18);color:var(--sand)}
+#modal .mb .go.duck{background:#f2c53d;color:#3a2a08}
+#modal .bal{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .go{flex:1;font-family:var(--display);font-size:20px;letter-spacing:.06em;border:0;padding:14px;background:var(--red);color:#fff;cursor:pointer;
   clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%)}
 .go.alt{background:rgba(216,194,124,.18);color:var(--sand);flex:.7}
@@ -186,6 +204,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 <div id="banner"></div>
 <div id="hint"></div>
 
+<div id="modal" hidden><div class="box"><div class="stripe"></div><div class="in" id="modalIn"></div></div></div>
 <div id="splash" hidden>
   <div class="sGlow"></div>
   <img id="sHero" alt="">
@@ -217,6 +236,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
       </div>
       <div class="stars" id="mStars" hidden></div>
       <div class="loot" id="mLoot" hidden></div>
+      <div class="wallet" id="wallet"><span class="w" title="Монеты"><span class="coin"></span><b id="wCoins">0</b></span><span class="w" title="Жизни"><span class="heart">♥</span><b id="wLives">5</b><small id="wTimer"></small></span><span class="w" style="margin-left:auto"><small id="wNote"></small></span></div>
       <div class="chnav"><button id="chPrev" aria-label="Предыдущая глава">‹</button><h2 id="chTitle">Глава 1</h2><button id="chNext" aria-label="Следующая глава">›</button></div>
       <p id="chIntro" hidden></p>
       <div class="levels" id="levels"></div>
@@ -512,19 +532,27 @@ const save = loadSave(); save.seenCh = save.seenCh || {};
 save.unlocked = MAX_LEVEL; // every operation is open
 let cloudT = null;
 function persist() {
+  save.ts = Date.now();
   try { localStorage.setItem('rubezh-3000', JSON.stringify(save)); } catch (e) {}
-  // signed-in players keep their stars in the platform cloud (saves table, app "rubezh")
-  if (window.Platform && Platform.user()) { clearTimeout(cloudT); cloudT = setTimeout(() => Platform.save({ stars: save.stars, cur: save.cur, seenCh: save.seenCh }).catch(() => {}), 800); }
+  // signed-in players keep stars, coins and lives in the platform cloud (saves table, app "rubezh")
+  if (window.Platform && Platform.user()) { clearTimeout(cloudT); cloudT = setTimeout(() => Platform.save(save).catch(() => {}), 800); }
 }
 async function pullCloud() {
   if (!window.Platform || !Platform.user()) return;
   try {
-    const r = await Platform.load(); const d = r && r.data; if (!d) { persist(); return; }
-    for (const k in d.stars || {}) save.stars[k] = Math.max(save.stars[k] || 0, d.stars[k]);
-    Object.assign(save.seenCh, d.seenCh || {});
-    if (d.cur && (!save.cur || save.cur === 1)) save.cur = d.cur;
+    const r = await Platform.load(); const d = r && r.data;
+    if (d) {
+      // stars and seen chapters merge; coins, lives and the daily streak follow the newer copy
+      for (const k in d.stars || {}) save.stars[k] = Math.max(save.stars[k] || 0, d.stars[k]);
+      Object.assign(save.seenCh, d.seenCh || {});
+      if ((d.ts || 0) > (save.ts || 0)) {
+        for (const k of ['coins', 'lives', 'livesAt', 'daily', 'cur']) if (d[k] !== undefined) save[k] = d[k];
+      }
+      save.credited = [...new Set([...(save.credited || []), ...(d.credited || [])])];
+    }
     persist();
-    if (!$('#menu').hidden) { renderLevels(); setGoLabel(); }
+    await applyCredits();
+    if (!$('#menu').hidden) { renderLevels(); setGoLabel(); renderWallet(); }
   } catch (e) {}
 }
 
@@ -990,7 +1018,7 @@ function lose() {
   G.state = 'over'; renderSupers();
   lastResult = { level: G.level, got: G.got, total: LV.crates.length, win: false, reachedBoss: !!G.boss, power: G.boss ? G.bossPower : power(), kills: G.kills, dist: G.dist / G.len };
   banner('ОТРЯД ПАЛ');
-  setTimeout(() => showSplash('lose'), 1300);
+  setTimeout(offerChance, 1000);
 }
 function win() {
   G.state = 'won'; renderSupers();
@@ -1001,7 +1029,8 @@ function win() {
   save.stars[G.level] = Math.max(save.stars[G.level] || 0, stars);
   save.unlocked = Math.min(MAX_LEVEL, Math.max(save.unlocked, G.level + 1));
   save.cur = Math.min(MAX_LEVEL, G.level + 1); persist();
-  lastResult = { level: G.level, got: G.got, total: LV.crates.length, win: true, stars, kept: G.count, of: G.startBoss, power: power(), kills: G.kills };
+  const reward = [0, 10, 20, 30][stars] + (LV.finale ? 150 : 0); addCoins(reward);
+  lastResult = { level: G.level, got: G.got, total: LV.crates.length, win: true, stars, kept: G.count, of: G.startBoss, power: power(), kills: G.kills, reward };
   banner('ПОБЕДА', '#d8c27c');
   setTimeout(() => showSplash('win'), 1600);
 }
@@ -1019,7 +1048,7 @@ addEventListener('keydown', e => {
     if (d) G.tx = clamp(Math.round(G.tx / LANE) * LANE + d * LANE, -LANE, LANE);
     if (e.code === 'Space' || e.code === 'Digit1') { e.preventDefault(); useSuper(0); }
     if (e.code === 'Digit2') useSuper(1);
-    if (e.code === 'KeyR') { G.state = 'menu'; start(G.level); }
+    if (e.code === 'KeyR') { G.state = 'menu'; spendLife(G.level); start(G.level); }
   }
   keys[e.code] = true;
 });
@@ -1117,6 +1146,7 @@ function update(dt) {
     s.position.y = G.state === 'won' ? Math.abs(Math.sin(time * 8 + i)) * .45 : 0;
     if (s.scale.x < 1) s.scale.setScalar(Math.min(1, s.scale.x + dt * 4));
   });
+  if (run && G.count > (G.peak || 0)) G.peak = G.count;
   if (run && G.medic) { G.medicT += dt * G.medic; if (G.medicT >= 4) { G.medicT -= 4; G.count++; syncSquad(); burst(G.x, 1.5, 0, 0x7fc46a, 5, 2); } }
 
   // fire straight ahead
@@ -1392,7 +1422,7 @@ function showMenu(kind) {
   }
   $('#retry').hidden = kind === 'start';
   viewCh = chapterOf(save.cur);
-  renderLevels(); setGoLabel();
+  renderLevels(); setGoLabel(); renderWallet();
   $('#menu').hidden = false;
   getLevel(save.cur).then(lv => { if (G.state !== 'run') newRun(lv, 'menu'); });
 }
@@ -1406,7 +1436,7 @@ function showSplash(kind) {
   $('#sTitle').textContent = kind === 'win' ? 'Рубеж взят' : 'Отряд пал';
   const st = $('#sStars'); st.hidden = kind !== 'win'; if (kind === 'win') st.innerHTML = starStr(r.stars);
   $('#sSub').textContent = kind === 'win'
-    ? `Выжили ${r.kept} из ${r.of} бойцов. Убито ${r.kills}.`
+    ? `Выжили ${r.kept} из ${r.of} бойцов. Награда: ${r.reward} монет.`
     : r.reachedBoss ? `Мощь ${fmt(r.power)} урона/с против нужных ${fmt(LV.need)}.` : `Орда прорвалась на ${Math.round(clamp(r.dist ?? 1, 0, 1) * 100)}% пути.`;
   sp.hidden = false;
   $('#sNext').focus({ preventScroll: true });
@@ -1414,7 +1444,10 @@ function showSplash(kind) {
 $('#sNext').addEventListener('click', () => { $('#splash').hidden = true; showMenu(lastResult && lastResult.win ? 'win' : 'lose'); });
 let starting = false;
 async function start(level) {
-  if (starting) return; starting = true;
+  if (starting) return;
+  regenLives();
+  if (needsLife(level) && save.lives <= 0) { $('#menu').hidden = false; return noLives(level); }
+  starting = true;
   const go = $('#go'); go.textContent = 'Готовлю операцию…'; go.disabled = true;
   try {
     const lv = await getLevel(level);
@@ -1429,9 +1462,110 @@ async function start(level) {
   } finally { starting = false; go.disabled = false; setGoLabel(); }
 }
 $('#go').addEventListener('click', () => start(save.cur));
-$('#restartBtn').addEventListener('click', () => { if (G && G.state === 'run') { G.state = 'menu'; start(G.level); } });
+$('#restartBtn').addEventListener('click', () => { if (G && G.state === 'run') { G.state = 'menu'; spendLife(G.level); start(G.level); } });
 $('#retry').addEventListener('click', () => start(lastResult ? lastResult.level : save.cur));
 
+/* ---------- economy: coins, lives, daily reward, second chance ---------- */
+const LIVES_MAX = 5, LIFE_MS = 20 * 60 * 1000, FREE_UNTIL = 20, REFILL = 300, CHANCE = [200, 400, 800];
+const DAILY = [30, 40, 50, 60, 70, 80, 100];
+save.coins = save.coins || 0; save.lives = save.lives ?? LIVES_MAX; save.livesAt = save.livesAt || Date.now();
+save.credited = save.credited || []; save.daily = save.daily || { day: '', streak: 0 };
+const needsLife = n => n > FREE_UNTIL;
+function regenLives() {
+  if (save.lives >= LIVES_MAX) { save.livesAt = Date.now(); return; }
+  const k = Math.floor((Date.now() - save.livesAt) / LIFE_MS);
+  if (k > 0) { save.lives = Math.min(LIVES_MAX, save.lives + k); save.livesAt += k * LIFE_MS; if (save.lives >= LIVES_MAX) save.livesAt = Date.now(); persist(); }
+}
+function nextLifeIn() { const ms = Math.max(0, LIFE_MS - (Date.now() - save.livesAt)); const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60; return m + ':' + String(s).padStart(2, '0'); }
+function spendLife(level) {
+  if (!needsLife(level)) return;
+  if (save.lives >= LIVES_MAX) save.livesAt = Date.now();
+  save.lives = Math.max(0, save.lives - 1); persist(); renderWallet();
+}
+function addCoins(n) { save.coins += n; persist(); renderWallet(); }
+function renderWallet() {
+  $('#wCoins').textContent = save.coins;
+  $('#wLives').textContent = save.lives;
+  $('#wTimer').textContent = save.lives < LIVES_MAX ? '+1 через ' + nextLifeIn() : '';
+  $('#wNote').textContent = needsLife(save.cur) ? '' : 'уровни 1–20 без жизней';
+}
+setInterval(() => { regenLives(); if (!$('#menu').hidden || !$('#modal').hidden) renderWallet(); }, 1000);
+// coins bought for ducks on the platform; credit any purchase this device has not seen yet
+async function applyCredits() {
+  if (!window.Platform || !Platform.user()) return;
+  try {
+    const list = await Platform.credits(); let added = 0;
+    for (const c of list) if (!save.credited.includes(c.id)) { save.credited.push(c.id); save.coins += c.coins; added += c.coins; }
+    if (added) { persist(); renderWallet(); }
+  } catch (e) {}
+}
+async function buyWithDucks(need) {
+  if (!window.Platform) { hint('Монеты за уточки — в игре на mlymir.ru', 3000); return false; }
+  const r = await Platform.buyCoins({ need });
+  if (!r) return false;
+  if (!save.credited.includes(r.id)) { save.credited.push(r.id); save.coins += r.coins; }
+  persist(); renderWallet(); return true;
+}
+// generic dialog: buttons are [label, className, handler]
+function modal(html, buttons) {
+  const m = $('#modal'), box = $('#modalIn');
+  box.innerHTML = html + `<div class="mb">${buttons.map((b, i) => `<button type="button" class="go ${b[1] || ''}" id="mbtn-${i}" data-i="${i}">${b[0]}</button>`).join('')}</div>`;
+  box.querySelectorAll('[data-i]').forEach(el => el.addEventListener('click', () => { const b = buttons[+el.dataset.i]; b[2](); }));
+  m.hidden = false; const f = box.querySelector('button'); if (f) f.focus({ preventScroll: true });
+}
+const closeModal = () => { $('#modal').hidden = true; };
+const coinHtml = n => `<span class="bal">У тебя <span class="coin"></span> ${n}</span>`;
+// daily reward: grows with a streak of days in a row
+function todayKey(d = new Date()) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function checkDaily() {
+  const t = todayKey(); if (save.daily.day === t) return;
+  const y = todayKey(new Date(Date.now() - 864e5));
+  const streak = save.daily.day === y ? save.daily.streak + 1 : 1;
+  const reward = DAILY[Math.min(streak, DAILY.length) - 1];
+  save.daily = { day: t, streak }; persist();
+  modal(`<h3>Награда дня</h3><p>День ${streak} подряд. Заходи каждый день — награда растёт до 100.</p><div class="big"><span class="coin"></span>+${reward}</div>`,
+    [['Забрать', '', () => { addCoins(reward); closeModal(); }]]);
+}
+// out of lives: refill for coins, buy coins for ducks, or wait
+function noLives(level) {
+  const draw = () => modal(`<h3 class="red">Жизни кончились</h3><p>Следующая жизнь через ${nextLifeIn()}. Можно пополнить сразу.</p>${coinHtml(save.coins)}`, [
+    [`Пополнить до ${LIVES_MAX} за <span class="coin"></span> ${REFILL}`, save.coins >= REFILL ? '' : 'alt', async () => {
+      if (save.coins < REFILL && !(await buyWithDucks(REFILL - save.coins))) return draw();
+      if (save.coins < REFILL) return draw();
+      save.coins -= REFILL; save.lives = LIVES_MAX; save.livesAt = Date.now(); persist(); renderWallet(); closeModal(); start(level);
+    }],
+    ['Монеты за уточки', 'duck', async () => { await buyWithDucks(REFILL - save.coins); draw(); }],
+    ['Подождать', 'alt', closeModal]
+  ]);
+  draw();
+}
+// second chance after a defeat: half of the best squad comes back, price doubles each time
+function offerChance() {
+  const n = G.chances || 0;
+  if (n >= CHANCE.length) return finishLose();
+  const cost = CHANCE[n], back = Math.max(5, Math.ceil((G.peak || 5) * .5));
+  const nearBoss = G.boss && G.boss.hp > 0 && G.boss.hp < G.boss.max * .15;
+  const draw = () => modal(`<h3 class="red">${nearBoss ? 'Добей босса!' : 'Второй шанс'}</h3>
+    <p>${nearBoss ? `У босса осталось ${Math.round(G.boss.hp / G.boss.max * 100)}% здоровья. ` : ''}Вернуть ${back} бойцов и продолжить с этого места.</p>${coinHtml(save.coins)}`, [
+    [`Продолжить за <span class="coin"></span> ${cost}`, save.coins >= cost ? '' : 'alt', async () => {
+      if (save.coins < cost && !(await buyWithDucks(cost - save.coins))) return draw();
+      if (save.coins < cost) return draw();
+      save.coins -= cost; persist(); renderWallet(); closeModal(); revive(back);
+    }],
+    ['Монеты за уточки', 'duck', async () => { await buyWithDucks(cost - save.coins); draw(); }],
+    ['Сдаться', 'alt', () => { closeModal(); finishLose(); }]
+  ]);
+  draw();
+}
+function revive(back) {
+  G.chances = (G.chances || 0) + 1;
+  G.state = 'run'; G.count = back; syncSquad(true);
+  for (const z of zombies) if (!z.dead && z.m.position.z > -25) { z.dead = true; scene.remove(z.m); burst(z.m.position.x, 1, z.m.position.z, 0xffd27a, 3, 4); }
+  for (const s of spits) { scene.remove(s.m); scene.remove(s.ring); } spits.length = 0;
+  if (G.boss && G.boss.hp > 0) { G.boss.m.position.z = Math.min(G.boss.m.position.z, -14); G.boss.arrived = false; G.boss.atkT = BOSS_ATK_T; }
+  shake = .4; banner('ВТОРОЙ ШАНС', '#ffd27a'); renderSupers();
+}
+function finishLose() { spendLife(G.level); showSplash('lose'); }
 /* ---------- platform account ---------- */
 if (window.Platform) {
   const acct = $('#acct');
@@ -1445,6 +1579,7 @@ G = { state: 'menu', scroll: 0, supers: [], count: 0, x: 0, tx: 0, dist: 0, len:
 LV = { need: 1, bossHp: 0, n: save.cur, crates: [], biome: biomeOf(save.cur) };
 applyBiome(LV.biome);
 showMenu('start');
+regenLives(); renderWallet(); setTimeout(checkDaily, 600);
 let last = performance.now(), errShown = false;
 function frame(t) {
   requestAnimationFrame(frame);
