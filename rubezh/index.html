@@ -49,20 +49,22 @@ body{
   color:var(--khaki);padding:7px 12px;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
   white-space:nowrap;display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
 .chip.boss{color:var(--red)}
+.rbtn{pointer-events:auto;border:0;cursor:pointer;font-size:18px;padding:5px 12px;line-height:1}
+.rbtn:hover{color:var(--sand)}
 .prog{flex:1;height:12px;background:rgba(23,18,14,.78);position:relative;border:2px solid rgba(216,194,124,.35);min-width:0}
 .prog .fill{position:absolute;inset:0 auto 0 0;width:0;background:repeating-linear-gradient(-45deg,var(--khaki) 0 8px,#bfa95f 8px 16px)}
 .prog .bm{position:absolute;right:-8px;top:50%;width:16px;height:16px;transform:translateY(-50%) rotate(45deg);background:var(--red);border:2px solid var(--night)}
 
-#bossbar{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 54px);display:flex;align-items:center;gap:10px;pointer-events:none}
+#bossbar{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;align-items:center;gap:10px;pointer-events:none}
 #bossbar span{font-family:var(--display);color:var(--red);letter-spacing:.12em;font-size:14px}
 .bbar{flex:1;height:14px;background:rgba(23,18,14,.85);border:2px solid var(--red)}
 #bossFill{height:100%;width:100%;background:var(--red);transition:width .1s}
 
-#eq{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
-  width:min(560px,calc(100% - 32px));background:rgba(23,18,14,.86);border-top:3px solid var(--red);
-  padding:9px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;
+#eq{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 52px);
+  width:min(560px,calc(100% - 32px));background:rgba(23,18,14,.86);border-bottom:3px solid var(--red);
+  padding:7px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;
   pointer-events:none;font-variant-numeric:tabular-nums}
-#eq.ok{border-top-color:var(--ok)}
+#eq.ok{border-bottom-color:var(--ok)}
 #eq .t{font-family:var(--display);font-size:17px;color:var(--sand);display:flex;flex-direction:column;align-items:center;line-height:1.05}
 #eq .t small{font-family:var(--body);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-top:2px}
 #eq .t.men{color:#8fd3ff}#eq .t.gun{color:#ffd27a}
@@ -70,7 +72,7 @@ body{
 #eq .res{font-size:20px}
 #eq .need{color:var(--red)}#eq.ok .need{color:var(--ok)}
 #eq .xtra{flex-basis:100%;text-align:center;font-size:11px;letter-spacing:.06em;color:#ffd27a}
-#supers{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 104px);display:flex;flex-direction:column;gap:8px;z-index:3}
+#supers{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 56px);display:flex;flex-direction:column;gap:8px;z-index:3}
 #supers button{font-family:var(--display);font-size:13px;letter-spacing:.04em;width:78px;height:52px;border:2px solid #ffd44a;
   background:radial-gradient(circle at 50% 30%,#6a5214,#2a2010);color:#fff1a8;cursor:pointer;box-shadow:0 0 18px rgba(255,212,74,.45);animation:sup 1.4s ease-in-out infinite}
 @keyframes sup{50%{box-shadow:0 0 30px rgba(255,212,74,.8)}}
@@ -87,7 +89,7 @@ body{
 #banner{position:fixed;left:0;right:0;top:32%;text-align:center;font-family:var(--display);font-size:clamp(34px,9vw,72px);
   color:var(--red);letter-spacing:.08em;text-shadow:0 4px 0 rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:scale(.8)}
 #banner.show{opacity:1;transform:scale(1)}
-#hint{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 140px);text-align:center;font-family:var(--display);
+#hint{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 60px);text-align:center;font-family:var(--display);
   color:var(--sand);font-size:17px;letter-spacing:.04em;opacity:0;transition:opacity .5s;pointer-events:none;text-shadow:0 2px 0 rgba(0,0,0,.6)}
 #hint.show{opacity:1}
 
@@ -174,6 +176,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
   <div class="chip" id="lvl">УР. 1</div>
   <div class="prog"><div class="fill" id="progFill"></div><div class="bm"></div></div>
   <div class="chip boss" id="bossHp">БОСС 0</div>
+  <button class="chip rbtn" id="restartBtn" type="button" title="Начать уровень заново" aria-label="Начать уровень заново" hidden>↻</button>
 </div>
 <div id="bossbar" hidden><span>БОСС</span><div class="bbar"><div id="bossFill"></div></div></div>
 <div id="eq"></div>
@@ -375,6 +378,7 @@ function levelKnobs(n) {
   else if (k % 5 === 0) diff *= 1.1;       // wall
   const finale = k === PER_CH;
   if (finale) diff *= 1.12;
+  if (n <= 20) diff *= .5 + .5 * (n - 1) / 19;   // first 20 operations teach the game: thinner horde
   return { ch, k, Lx, diff, finale };
 }
 const fDecent = p => (START + 32 * p) * 1.5 * (1 + 8 * Math.pow(p, 1.6));
@@ -471,7 +475,8 @@ function buildLevelTry(n, ease) {
     finals.push(f);
   }
   const sorted = finals.slice().sort((a, b) => b - a);
-  const share = Math.max(.06, .25 - Math.min(L, 8) * .013) * (K.k % 5 === 4 ? 1.5 : 1);
+  let share = Math.max(.06, .25 - Math.min(L, 8) * .013) * (K.k % 5 === 4 ? 1.5 : 1);
+  if (n <= 20) share = Math.max(share, .7 - .025 * (n - 1));   // early levels forgive most crate choices
   const need0 = Math.min(best * .88, sorted[Math.floor(sorted.length * share)] * .97);
   // real play loses more to lane changes, mines and special enemies than the model: measured with bot runs per chapter
   const eff = (GAME_EFF - .18 * Math.min(1, (ch - 1) / 11)) * ({ winter: .74, night: .92 }[biomeOf(n)] || 1); // slow lane changes on ice, short sight at night
@@ -479,6 +484,7 @@ function buildLevelTry(n, ease) {
   // even chapters bring the kraken: it never closes in, it slams lanes, so the squad loses fire time dodging
   LV.bossKind = ch % 2 === 0 ? 'kraken' : 'fat';
   if (LV.bossKind === 'kraken') LV.bossHp = Math.max(50, Math.round(LV.bossHp * .78));
+  if (n <= 20) LV.bossHp = Math.max(50, Math.round(LV.bossHp * (.6 + .4 * (n - 1) / 19)));   // slack for learning players
   LV.need = LV.bossHp / BOSS_T;
   LV.paths = finals.length; LV.wins = finals.filter(f => f >= LV.need / eff).length;
   return LV;
@@ -939,6 +945,7 @@ function applyReward(rw) {
   updateHud(true);
 }
 function renderSupers() {
+  $('#restartBtn').hidden = !G || G.state !== 'run';
   const el = $('#supers');
   el.innerHTML = G.supers.map((s, i) => `<button id="sup-${i}" data-i="${i}" title="${SUPERS[s].name}">${SUPERS[s].short}</button>`).join('');
   el.hidden = !G.supers.length || G.state !== 'run';
@@ -1012,6 +1019,7 @@ addEventListener('keydown', e => {
     if (d) G.tx = clamp(Math.round(G.tx / LANE) * LANE + d * LANE, -LANE, LANE);
     if (e.code === 'Space' || e.code === 'Digit1') { e.preventDefault(); useSuper(0); }
     if (e.code === 'Digit2') useSuper(1);
+    if (e.code === 'KeyR') { G.state = 'menu'; start(G.level); }
   }
   keys[e.code] = true;
 });
@@ -1415,11 +1423,13 @@ async function start(level) {
     newRun(lv, 'run'); renderSupers();
     if (level < MAX_LEVEL) getLevel(level + 1);
     const ch = chapterOf(level);
-    if (INTRO[ch] && !save.seenCh[ch]) { save.seenCh[ch] = 1; persist(); hint(INTRO[ch], 6500); }
+    if (level === 1) hint('Уйди влево и набери бойцов, потом вернись в центр стрелять по орде', 6500);
+    else if (INTRO[ch] && !save.seenCh[ch]) { save.seenCh[ch] = 1; persist(); hint(INTRO[ch], 6500); }
     else hint(`Босс: ${LV.bossHp} HP. Нужно ≈ ${fmt(LV.need)} урона/с`, 3200);
   } finally { starting = false; go.disabled = false; setGoLabel(); }
 }
 $('#go').addEventListener('click', () => start(save.cur));
+$('#restartBtn').addEventListener('click', () => { if (G && G.state === 'run') { G.state = 'menu'; start(G.level); } });
 $('#retry').addEventListener('click', () => start(lastResult ? lastResult.level : save.cur));
 
 /* ---------- platform account ---------- */
