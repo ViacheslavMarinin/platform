@@ -194,6 +194,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
   <div class="chip" id="lvl">УР. 1</div>
   <div class="prog"><div class="fill" id="progFill"></div><div class="bm"></div></div>
   <div class="chip boss" id="bossHp">БОСС 0</div>
+  <button class="chip rbtn" id="menuBtn" type="button" title="Выйти в меню" aria-label="Выйти в меню" hidden>☰</button>
   <button class="chip rbtn" id="restartBtn" type="button" title="Начать уровень заново" aria-label="Начать уровень заново" hidden>↻</button>
 </div>
 <div id="bossbar" hidden><span>БОСС</span><div class="bbar"><div id="bossFill"></div></div></div>
@@ -973,7 +974,7 @@ function applyReward(rw) {
   updateHud(true);
 }
 function renderSupers() {
-  $('#restartBtn').hidden = !G || G.state !== 'run';
+  $('#restartBtn').hidden = $('#menuBtn').hidden = !G || G.state !== 'run';
   const el = $('#supers');
   el.innerHTML = G.supers.map((s, i) => `<button id="sup-${i}" data-i="${i}" title="${SUPERS[s].name}">${SUPERS[s].short}</button>`).join('');
   el.hidden = !G.supers.length || G.state !== 'run';
@@ -1048,6 +1049,7 @@ addEventListener('keydown', e => {
     if (d) G.tx = clamp(Math.round(G.tx / LANE) * LANE + d * LANE, -LANE, LANE);
     if (e.code === 'Space' || e.code === 'Digit1') { e.preventDefault(); useSuper(0); }
     if (e.code === 'Digit2') useSuper(1);
+    if (e.code === 'Escape') { askExit(); return; }
     if (e.code === 'KeyR') { G.state = 'menu'; spendLife(G.level); start(G.level); }
   }
   keys[e.code] = true;
@@ -1462,6 +1464,17 @@ async function start(level) {
   } finally { starting = false; go.disabled = false; setGoLabel(); }
 }
 $('#go').addEventListener('click', () => start(save.cur));
+// leave the run for the main menu; from level 21 that costs a life, like any lost run
+function askExit() {
+  if (!G || G.state !== 'run') return;
+  const paid = needsLife(G.level), keepSlow = G.slowT;
+  G.state = 'paused';
+  modal(`<h3>Выйти в меню?</h3><p>Забег на этом уровне прервётся.${paid ? ' Это стоит одну жизнь.' : ''}</p>`, [
+    ['Продолжить бой', '', () => { closeModal(); G.state = 'run'; G.slowT = keepSlow; }],
+    ['Выйти в меню', 'alt', () => { closeModal(); G.state = 'menu'; spendLife(G.level); renderSupers(); $('#bossbar').hidden = true; showMenu('start'); }]
+  ]);
+}
+$('#menuBtn').addEventListener('click', askExit);
 $('#restartBtn').addEventListener('click', () => { if (G && G.state === 'run') { G.state = 'menu'; spendLife(G.level); start(G.level); } });
 $('#retry').addEventListener('click', () => start(lastResult ? lastResult.level : save.cur));
 
