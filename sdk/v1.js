@@ -216,6 +216,9 @@
   .mm-bal{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 12px;font-weight:800;font-size:16px}
   .mm-bal svg{width:24px;height:24px}
   .mm-x small{display:block}
+  .mm-f textarea{display:block;width:100%;margin-top:4px;font-family:inherit;font-weight:600;font-size:16px;line-height:1.35;padding:12px 14px;border-radius:12px;border:1.5px solid #cfe3ea;background:#fff;color:#1f3a4a;outline:none;resize:vertical;min-height:120px;max-height:50vh}
+  .mm-f textarea:focus{border-color:#4aa8c4}
+  .mm-cnt{float:right;font-weight:700;color:#9aaab3}
   .mm-xbal{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:22px;margin:2px 0 2px}
   .mm-xbal svg{width:30px;height:30px}
   .mm-xrate{text-align:center;color:#4d6b7a;font-size:13px;margin:0 0 12px}
@@ -234,6 +237,7 @@
   `;
   let ov = null, tab = 'login', busy = false, err = '', armed = false, resolveOpen = null, gift = 0;
   let xs = null;   // окно обмена: { need, rate, pick, done, err, resolve }
+  let fb = null;   // окно обратной связи: { sent, err, msg, contact }
   const fmt = n => Number(n || 0).toLocaleString('ru-RU');
   const ducksWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'уточек' : b === 1 ? 'уточка' : b >= 2 && b <= 4 ? 'уточки' : 'уточек'; };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
@@ -245,7 +249,7 @@
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-modal="true"></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
-    ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user && !gift){ e.preventDefault(); submit(); } if (e.key === 'Escape') close(); });
+    ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user && !gift && !fb && !xs){ e.preventDefault(); submit(); } if (e.key === 'Escape' && !busy) close(); });
   }
   const coinsWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'монет' : b === 1 ? 'монета' : b >= 2 && b <= 4 ? 'монеты' : 'монет'; };
   function renderX(card){
@@ -279,8 +283,53 @@
       <p class="mm-err">${esc(xs.err || '')}</p>
       <div class="mm-row"><button class="mm-btn" data-a="close">Не сейчас</button><button class="mm-btn pri" data-a="xgo" ${!pick || busy ? 'disabled' : ''}>${busy ? 'Секунду…' : pick ? `Обменять ${fmt(pick.d)}` : 'Обменять'}</button></div>`;
   }
+  function renderFb(card){
+    const top = `<div class="mm-top">${DUCK}<div><small>Мой маленький мир</small><b>${fb.sent ? 'Спасибо!' : 'Напиши нам'}</b></div></div>`;
+    if (fb.sent){
+      card.innerHTML = top + `<p class="mm-note" style="margin:0 0 14px;font-size:14px">Сообщение получено. Мы читаем всё: идеи, ошибки, вопросы.</p>
+        <div class="mm-row"><button class="mm-btn pri" data-a="close">Готово</button></div>`;
+      return;
+    }
+    card.innerHTML = top + `<form class="mm-f" onsubmit="return false">
+        <label>Сообщение <span class="mm-cnt" data-f="cnt">${(fb.msg || '').length}/2000</span><textarea data-f="msg" maxlength="2000" placeholder="Идея, ошибка, вопрос — пиши как есть">${esc(fb.msg || '')}</textarea></label>
+        <label>Как с тобой связаться <span style="font-weight:600">(необязательно)</span><input data-f="contact" maxlength="120" autocomplete="off" placeholder="телеграм, почта" value="${esc(fb.contact || '')}"></label>
+      </form>
+      <p class="mm-err">${esc(fb.err || '')}</p>
+      <div class="mm-row"><button class="mm-btn" data-a="close">Отмена</button><button class="mm-btn pri" data-a="fbsend" ${busy ? 'disabled' : ''}>${busy ? 'Отправляю…' : 'Отправить'}</button></div>
+      ${user ? `<p class="mm-note">Пишешь как ${esc(user.username)}.</p>` : ''}`;
+    const ta = card.querySelector('[data-f="msg"]'), cnt = card.querySelector('[data-f="cnt"]');
+    ta.addEventListener('input', () => { fb.msg = ta.value; cnt.textContent = ta.value.length + '/2000'; if (fb.err){ fb.err = ''; card.querySelector('.mm-err').textContent = ''; } });
+    card.querySelector('[data-f="contact"]').addEventListener('input', e => { fb.contact = e.target.value; });
+  }
+  async function sendFb(){
+    if (busy || !fb) return;
+    const msg = (fb.msg || '').trim();
+    if (msg.length < 3){ fb.err = 'Напиши хотя бы пару слов'; render(); return; }
+    busy = true; fb.err = ''; render();
+    try {
+      await ready; if (!sb) throw new Error('network');
+      const { error } = await sb.rpc('send_feedback', {
+        p_message: msg, p_contact: (fb.contact || '').trim() || null, p_app: APP,
+        p_page: (location.pathname + location.search).slice(0, 200), p_agent: (navigator.userAgent || '').slice(0, 300)
+      });
+      if (error) throw error;
+      fb.sent = true;
+    } catch(e){
+      const m = ((e && e.message) || '').toLowerCase();
+      fb.err = m.includes('rate') ? 'Слишком много сообщений подряд. Попробуй через час' : m.includes('short') ? 'Напиши хотя бы пару слов' : m.includes('long') ? 'Слишком длинно: до 2000 символов' : m.includes('fetch') || m.includes('network') ? 'Нет связи с сервером. Попробуй ещё раз' : 'Не получилось отправить: ' + ((e && e.message) || 'ошибка');
+    }
+    busy = false; render();
+  }
+  function openFeedback(){
+    mount(); busy = false; err = ''; gift = 0;
+    if (xs){ const x = xs; xs = null; x.resolve(null); }
+    fb = { sent: false, err: '', msg: '', contact: '' };
+    render(); ov.hidden = false;
+    setTimeout(() => { const t = ov.querySelector('[data-f="msg"]'); if (t) t.focus(); }, 30);
+  }
   function render(){
     const card = ov.firstChild;
+    if (fb) return renderFb(card);
     if (xs) return renderX(card);
     if (gift){
       card.innerHTML = `<div class="mm-gift">${DUCK}<small>Подарок от Моего маленького мира</small>
@@ -335,7 +384,7 @@
     const x = e.target.closest('[data-x]'); if (x && xs && !busy && !x.disabled){ xs.pick = +x.dataset.x; xs.err = ''; render(); return; }
     const t = e.target.closest('[data-tab]'); if (t && !busy){ tab = t.dataset.tab; err = ''; render(); field('login').focus(); return; }
     const a = e.target.closest('[data-a]');
-    if (!a){ if (e.target === ov && !busy) close(); return; }
+    if (!a){ if (e.target === ov && !busy && !(fb && !fb.sent && (fb.msg || '').trim())) close(); return; }
     const act = a.dataset.a;
     if (act === 'xlogin'){
       // после входа то же окно обмена открывается снова и отвечает тому же вызову игры
@@ -353,6 +402,7 @@
       }
       busy = false; render(); return;
     }
+    if (act === 'fbsend'){ sendFb(); return; }
     if (act === 'close') close();
     else if (act === 'submit') submit();
     else if (act === 'logout'){
@@ -376,7 +426,7 @@
     });
   }
   function open(mode){
-    mount(); armed = false; err = ''; busy = false; gift = 0;
+    mount(); armed = false; err = ''; busy = false; gift = 0; fb = null;
     if (xs){ const x = xs; xs = null; x.resolve(null); }
     if (mode === 'reg' || mode === 'login') tab = mode;
     render(); ov.hidden = false;
@@ -384,13 +434,14 @@
     return new Promise(res => { resolveOpen = res; });
   }
   function celebrate(n){
-    if (xs) return;   // подарок покажется при следующем заходе (ключ GIFT_KEY остался)
+    if (xs || fb) return;   // подарок покажется при следующем заходе (ключ GIFT_KEY остался)
     mount(); gift = n; busy = false; armed = false;
     render(); ov.hidden = false;
   }
   function settle(){ if (resolveOpen){ const r = resolveOpen; resolveOpen = null; r(user); } }
   function close(){
     if (!ov) return;
+    fb = null;
     if (gift){ gift = 0; LS.set(GIFT_KEY, ''); }
     if (xs){ const x = xs; xs = null; ov.hidden = true; x.resolve(x.done || null); return; }
     ov.hidden = true;
@@ -412,6 +463,7 @@
     balances: () => balances,                // последние известные балансы или null
     onWallet(fn){ wsubs.add(fn); return () => wsubs.delete(fn); },  // балансы изменились
     buyCoins,                                // окно обмена уточек на монеты: Promise<{ id, coins, ducks } | null>
+    feedback: openFeedback,                  // окно «Напиши нам»: сообщение уходит админу (может и гость)
     credits,                                 // все покупки монет за уточки в этой игре: Promise<[{ id, coins }]>
     rate,                                    // Promise<число>: монет игры за 1 уточку (null — обмена нет)
     get client(){ return sb; }               // клиент Supabase для своих таблиц игры

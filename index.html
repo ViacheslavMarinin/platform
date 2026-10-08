@@ -122,6 +122,14 @@ button.note.in{cursor:default}
 .site-about h2{color:var(--ink);font-size:17px;margin:0 0 8px}
 .site-about p{margin:0 0 10px}
 .site-about a{color:var(--ink);font-weight:800}
+.fb-wrap{margin-top:22px;text-align:center}
+.fb-wrap p{margin:8px 0 0;font-size:13px;color:var(--ink-soft)}
+.fb-btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font-family:inherit;font-weight:800;font-size:15px;color:var(--ink);
+  background:var(--card);padding:11px 20px;border-radius:999px;box-shadow:0 2px 0 var(--card-edge),0 8px 18px -12px rgba(31,58,74,.5)}
+.fb-btn svg{width:20px;height:20px}
+.fb-btn:active{transform:scale(.98)}
+.admin-link{position:relative}
+.admin-link .badge{font-style:normal;position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e63946;color:#fff;font-size:11px;font-weight:800;line-height:20px;text-align:center;box-shadow:0 0 0 2px #e3f4f8}
 footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);opacity:.8}
 </style>
 </head>
@@ -197,6 +205,14 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
     <p>Один аккаунт подходит для всех игр: войдите один раз, и прогресс сохранится в облаке — можно продолжить с другого устройства с того же места.</p>
   </section>
 
+  <div class="fb-wrap">
+    <button class="fb-btn" id="fbBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.5c0 4-3.6 7-8 7-1.2 0-2.3-.2-3.3-.6L4 20l1.2-3.6C4.4 15.2 4 13.9 4 12.5c0-4 3.6-7.5 8-7.5s8 3.5 8 7.5z"/><path d="M8.5 12.5h.01M12 12.5h.01M15.5 12.5h.01" stroke-width="2.8"/></svg>
+      Написать нам
+    </button>
+    <p>Идея, ошибка, вопрос — прочитаем всё.</p>
+  </div>
+
   <footer>mlymir.ru</footer>
 </div>
 
@@ -209,11 +225,22 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
   const show = u => {
     t.textContent = u ? u.username : 'Войти'; b.title = u ? 'Аккаунт' : 'Войти или зарегистрироваться'; b.hidden = false;
     adm.hidden = true;
-    if (u) Platform.isAdmin().then(ok => { if (ok && Platform.user() && Platform.user().id === u.id) adm.hidden = false; });
+    if (u) Platform.isAdmin().then(ok => {
+      if (!(ok && Platform.user() && Platform.user().id === u.id)) return;
+      adm.hidden = false;
+      // непрочитанные сообщения обратной связи — значком на «Сводке»
+      Platform.client.rpc('feedback_unread').then(({ data }) => {
+        let bd = adm.querySelector('.badge');
+        if (!(data > 0)){ if (bd) bd.remove(); return; }
+        if (!bd){ bd = document.createElement('i'); bd.className = 'badge'; adm.appendChild(bd); }
+        bd.textContent = data > 99 ? '99+' : data; adm.title = `Новых сообщений: ${data}`;
+      }).catch(() => {});
+    });
   };
   Platform.ready.then(show);
   Platform.onChange(show);
   b.addEventListener('click', () => Platform.login());
+  document.getElementById('fbBtn').addEventListener('click', () => Platform.feedback());
 
   // уточки: баланс у вошедшего, приглашение для гостя
   const d = document.getElementById('ducks'), dn = d.querySelector('span');

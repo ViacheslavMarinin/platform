@@ -60,6 +60,24 @@ tr:last-child td{border-bottom:0}
 .state p{color:var(--ink-2);margin:6px 0 16px}
 [hidden]{display:none!important}
 .small{font-size:12px}
+.fb-card .dh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.fb-card h2{margin:0;display:flex;align-items:center;gap:8px}
+.fbn{background:#e63946;color:#fff;border-radius:999px;font-size:12px;padding:2px 9px}
+.fbn:empty{display:none}
+.fbonly{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.fbi{border-top:1px solid var(--grid);padding:12px 0}
+.fbi:first-child{border-top:0}
+.fbi.new{position:relative}
+.fbi.new::before{content:'';position:absolute;left:-10px;top:18px;width:6px;height:6px;border-radius:50%;background:#e63946}
+.fbh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;color:var(--ink-2)}
+.fbh b{color:var(--ink);font-size:14px}
+.fbtag{background:#e6f4f8;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;color:var(--ink)}
+.fbm{white-space:pre-wrap;word-break:break-word;margin:6px 0 6px;font-size:15px;color:var(--ink)}
+.fbi:not(.new) .fbm{color:var(--ink-2)}
+.fbc{font-size:13px;color:var(--ink-2);word-break:break-word}
+.fbx{margin-left:auto;border:0;background:#e6f4f8;border-radius:999px;padding:5px 12px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;color:var(--ink)}
+.fbi.new .fbx{background:#ffd23f;color:#3a2a00}
+.fbmore{margin-top:8px;border:0;background:none;font:inherit;font-weight:800;color:var(--ink);cursor:pointer;padding:6px 0}
 .ducks-card .dh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .ducks-card h2{display:flex;align-items:center;gap:8px;margin:0}
 .ducks-card h2 img,.gcard h2 img{width:26px;height:26px}
@@ -96,6 +114,11 @@ td.duck{white-space:nowrap}
     <h1>Сводка платформы</h1>
     <p class="sub" id="gen"></p>
     <div class="tiles" id="tiles"></div>
+    <div class="card fb-card" id="fbCard">
+      <div class="dh"><h2>Сообщения <span class="fbn" id="fbN"></span></h2>
+        <label class="fbonly"><input type="checkbox" id="fbOnly"> только новые</label></div>
+      <div id="fbList"><p class="muted">Загружаю…</p></div>
+    </div>
     <div class="charts">
       <div class="card"><h2>Регистрации</h2><p class="tot" id="totNew"></p><div class="chart" id="chNew"></div></div>
       <div class="card"><h2>Играли</h2><p class="tot" id="totAct"></p><div class="chart" id="chAct"></div></div>
@@ -222,6 +245,7 @@ td.duck{white-space:nowrap}
         throw error;
       }
       render(data);
+      loadFeedback();
     } catch(e){
       show(`<h2>Не получилось загрузить</h2><p>${esc((e && e.message) || 'нет связи')}</p><button class="btn" id="go" type="button">Ещё раз</button>`);
       $('go').onclick = load;
@@ -258,6 +282,47 @@ td.duck{white-space:nowrap}
       $('gGo').disabled = false; $('gGo').textContent = 'Подарить';
     }
   };
+  // ---------- обратная связь ----------
+  let fbData = null, fbLimit = 30;
+  const APPNAMES = { platform: 'витрина', piko: 'Пико', hamsters: 'Хомяки', rubezh: 'Рубеж' };
+  async function loadFeedback(){
+    try {
+      const { data, error } = await Platform.client.rpc('feedback_list', { p_limit: 500 });
+      if (error) throw error;
+      fbData = data; renderFeedback();
+    } catch(e){
+      const m = ((e && e.message) || '');
+      $('fbList').innerHTML = /feedback_list|PGRST202|function/i.test(m)
+        ? '<p class="muted">Нужно выполнить SQL обратной связи (008_feedback.sql) в Supabase.</p>'
+        : `<p class="muted">Не получилось загрузить: ${esc(m || 'нет связи')}</p>`;
+    }
+  }
+  function renderFeedback(){
+    const d = fbData; if (!d) return;
+    $('fbN').textContent = d.unread ? d.unread : '';
+    const only = $('fbOnly').checked;
+    const items = d.items.filter(f => !only || !f.is_read);
+    if (!items.length){ $('fbList').innerHTML = `<p class="muted">${only ? 'Новых сообщений нет.' : 'Пока никто не писал.'}</p>`; return; }
+    const show = items.slice(0, fbLimit);
+    $('fbList').innerHTML = show.map(f => `<div class="fbi${f.is_read ? '' : ' new'}">
+        <div class="fbh"><b>${f.username ? esc(f.username) : 'Гость'}</b><span class="fbtag">${esc(APPNAMES[f.app] || f.app || '—')}</span><span>${when(f.created_at && new Date(f.created_at).toLocaleString('sv-SE', { timeZone: 'Europe/Moscow' }).replace(' ', 'T'))}</span>
+          <button class="fbx" type="button" data-fb="${f.id}" data-read="${f.is_read ? 0 : 1}">${f.is_read ? 'Вернуть в новые' : 'Прочитано'}</button></div>
+        <div class="fbm">${esc(f.message)}</div>
+        ${f.contact ? `<div class="fbc">Связь: ${esc(f.contact)}</div>` : ''}
+      </div>`).join('') + (items.length > show.length ? `<button class="fbmore" type="button" id="fbMore">Показать ещё ${items.length - show.length}</button>` : '');
+  }
+  $('fbOnly').addEventListener('change', () => { fbLimit = 30; renderFeedback(); });
+  $('fbList').addEventListener('click', async e => {
+    if (e.target.id === 'fbMore'){ fbLimit += 30; renderFeedback(); return; }
+    const b = e.target.closest('[data-fb]'); if (!b) return;
+    const id = +b.dataset.fb, read = b.dataset.read === '1';
+    b.disabled = true;
+    const { error } = await Platform.client.rpc('feedback_mark', { p_id: id, p_read: read });
+    if (error){ b.disabled = false; showToast('Не получилось: ' + error.message); return; }
+    const f = fbData.items.find(x => x.id === id); if (f){ f.is_read = read; fbData.unread += read ? -1 : 1; }
+    renderFeedback();
+  });
+
   function showToast(t){
     const el = document.createElement('div'); el.textContent = t;
     el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:#1f3a4a;color:#fff;font-weight:800;font-size:14px;padding:10px 16px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.3);max-width:calc(100% - 32px);text-align:center';
