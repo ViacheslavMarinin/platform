@@ -16,7 +16,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "@id": "https://mlymir.ru/#site", "name": "Мой маленький мир", "alternateName": "mlymir.ru", "url": "https://mlymir.ru/", "inLanguage": "ru"}, {"@type": "ItemList", "name": "Игры", "itemListElement": [{"@type": "ListItem", "position": 1, "item": {"@type": "VideoGame", "name": "Пико и сокровища", "url": "https://mlymir.ru/piko/", "genre": ["Три в ряд", "Головоломка"], "gamePlatform": "Браузер", "applicationCategory": "Game", "operatingSystem": "Any", "inLanguage": "ru", "isAccessibleForFree": true, "image": "https://mlymir.ru/img/piko.webp", "description": "Три в ряд с дракончиком Пико: сотни уровней, препятствия и сокровища."}}, {"@type": "ListItem", "position": 2, "item": {"@type": "VideoGame", "name": "Хомячья мозаика", "url": "https://mlymir.ru/hamsters/", "genre": ["Головоломка"], "gamePlatform": "Браузер", "applicationCategory": "Game", "operatingSystem": "Any", "inLanguage": "ru", "isAccessibleForFree": true, "image": "https://mlymir.ru/img/hamsters.webp", "description": "Головоломка: выпускай хомяков из норок, и они разберут картинку по цветам."}}]}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "@id": "https://mlymir.ru/#site", "name": "Мой маленький мир", "alternateName": "mlymir.ru", "url": "https://mlymir.ru/", "inLanguage": "ru"}, {"@type": "ItemList", "name": "Игры", "itemListElement": [{"@type": "ListItem", "position": 1, "item": {"@type": "VideoGame", "name": "Пико и сокровища", "url": "https://mlymir.ru/piko/", "genre": ["Три в ряд", "Головоломка"], "gamePlatform": "Браузер", "applicationCategory": "Game", "operatingSystem": "Any", "inLanguage": "ru", "isAccessibleForFree": true, "image": "https://mlymir.ru/img/piko.webp", "description": "Три в ряд с дракончиком Пико: сотни уровней, препятствия и сокровища."}}, {"@type": "ListItem", "position": 2, "item": {"@type": "VideoGame", "name": "Хомячья мозаика", "url": "https://mlymir.ru/hamsters/", "genre": ["Головоломка"], "gamePlatform": "Браузер", "applicationCategory": "Game", "operatingSystem": "Any", "inLanguage": "ru", "isAccessibleForFree": true, "image": "https://mlymir.ru/img/hamsters.webp", "description": "Головоломка: выпускай хомяков из норок, и они разберут картинку по цветам."}}, {"@type": "ListItem", "position": 3, "item": {"@type": "VideoGame", "name": "Последний рубеж", "url": "https://mlymir.ru/rubezh/", "genre": ["Шутер", "Головоломка"], "gamePlatform": "Браузер", "applicationCategory": "Game", "operatingSystem": "Any", "inLanguage": "ru", "isAccessibleForFree": true, "image": "https://mlymir.ru/img/rubezh.webp", "description": "3D-шутер-головоломка: веди отряд, выбирай полосу — бойцы, орда или ящики с оружием. 3000 уровней."}}]}]}</script>
 <meta name="theme-color" content="#bfe8f2">
 <link rel="icon" href="/img/duck.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/duck-180.png">
@@ -94,6 +94,8 @@ h2{font-weight:800;font-size:20px;margin:0 0 12px 4px}
 .game.piko .art{background:var(--piko)}
 .game.hamsters .art{background:#f2e9d6}
 .game.hamsters .play{background:var(--hamsters)}
+.game.rubezh .art{background:#2a1d17}
+.game.rubezh .play{background:#c4402f}
 .game .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
 .game .name{font-weight:800;font-size:19px}
 .game .about{color:var(--ink-soft);font-size:14px;line-height:1.35;flex:1}
@@ -165,6 +167,14 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
           <span class="play">Играть</span>
         </div>
       </a>
+      <a class="game rubezh" href="/rubezh/">
+        <div class="art"><img src="/img/rubezh.webp" alt="Боец с автоматом и Кракен на дороге" width="384" height="288" loading="lazy"></div>
+        <div class="body">
+          <div class="name">Последний рубеж</div>
+          <div class="about">3D-шутер-головоломка: набирай бойцов, сдерживай орду, вскрывай ящики с оружием. 3000 уровней.</div>
+          <span class="play">Играть</span>
+        </div>
+      </a>
       <div class="game soon" aria-disabled="true">
         <div class="art">✦</div>
         <div class="body">
@@ -183,7 +193,7 @@ footer{margin-top:28px;text-align:center;font-size:13px;color:var(--ink-soft);op
   <section class="site-about">
     <h2>О платформе</h2>
     <p>«Мой маленький мир» — бесплатные игры прямо в браузере: ничего не нужно скачивать и устанавливать. Игры работают на телефоне, планшете и компьютере, а на iPhone и Android их можно добавить на экран «Домой» и играть как в приложение.</p>
-    <p><a href="/piko/">«Пико и сокровища»</a> — головоломка «три в ряд» с дракончиком Пико: сотни уровней в разных мирах, препятствия, бонусы и сундуки с сокровищами. <a href="/hamsters/">«Хомячья мозаика»</a> — пиксельная головоломка: выпускайте хомяков из норок, и они разберут картинку по цветам.</p>
+    <p><a href="/piko/">«Пико и сокровища»</a> — головоломка «три в ряд» с дракончиком Пико: сотни уровней в разных мирах, препятствия, бонусы и сундуки с сокровищами. <a href="/hamsters/">«Хомячья мозаика»</a> — пиксельная головоломка: выпускайте хомяков из норок, и они разберут картинку по цветам. <a href="/rubezh/">«Последний рубеж»</a> — 3D-шутер-головоломка: отряд стреляет только прямо, и в каждый момент нужно решать, набирать бойцов, сдерживать орду зомби или вскрывать ящики с оружием.</p>
     <p>Один аккаунт подходит для всех игр: войдите один раз, и прогресс сохранится в облаке — можно продолжить с другого устройства с того же места.</p>
   </section>
 
