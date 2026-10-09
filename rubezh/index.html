@@ -129,6 +129,7 @@ body{
 .eyebrow{margin:0;font-size:12px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
 h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(30px,8vw,44px);line-height:1;color:var(--khaki);letter-spacing:.03em;text-wrap:balance}
 h1.red{color:var(--red)}
+.sub:empty{display:none}
 .sub{margin:0;color:var(--sand);opacity:.88;line-height:1.45;font-size:15px}
 .rules{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @media (max-width:460px){.rules{grid-template-columns:1fr}}
@@ -248,17 +249,17 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
         <img id="mHero" class="hero" alt="" hidden>
       </div>
       <div class="pick" id="pick" role="radiogroup" aria-label="Кем играть"></div>
-      <div class="rules" id="mRules">
-        <div class="rule" style="--c:var(--blue)"><b>Слева — бойцы</b>Новобранцы стоят вдоль полосы и вливаются по одному, пока отряд идёт слева.</div>
-        <div class="rule" style="--c:var(--red)"><b>Центр — орда</b>Отряд стреляет только прямо. Чтобы сдержать поток, встань по центру. Каждый прорвавшийся забирает бойца.</div>
-        <div class="rule" style="--c:var(--gold)"><b>Справа — ящики</b>Оружие и усилители заперты в ящиках. Встань напротив и набей урон, пока ящик не проехал.</div>
-      </div>
       <div class="stars" id="mStars" hidden></div>
       <div class="loot" id="mLoot" hidden></div>
       <div class="chnav"><button id="chPrev" aria-label="Предыдущая глава">‹</button><h2 id="chTitle">Глава 1</h2><button id="chNext" aria-label="Следующая глава">›</button></div>
       <p id="chIntro" hidden></p>
       <div class="levels" id="levels"></div>
       <div class="btns"><button class="go alt" id="retry" hidden>Заново</button><button class="go" id="go">В бой</button></div>
+      <div class="rules" id="mRules">
+        <div class="rule" style="--c:var(--blue)"><b>Слева — бойцы</b>Новобранцы стоят вдоль полосы и вливаются по одному, пока отряд идёт слева.</div>
+        <div class="rule" style="--c:var(--red)"><b>Центр — орда</b>Отряд стреляет только прямо. Чтобы сдержать поток, встань по центру. Каждый прорвавшийся забирает бойца.</div>
+        <div class="rule" style="--c:var(--gold)"><b>Справа — ящики</b>Оружие и усилители заперты в ящиках. Встань напротив и набей урон, пока ящик не проехал.</div>
+      </div>
       <p class="ctrl">Свайп или ← → — соседняя полоса. Пробел или кнопка справа — супер-бонус. Раскладка уровня всегда одна и та же.</p>
     </div>
   </div>
@@ -1435,7 +1436,7 @@ function showMenu(kind) {
   $('#mRules').hidden = kind !== 'start';
   const r = lastResult, loot = $('#mLoot'), stars = $('#mStars');
   if (kind === 'start') {
-    $('#mSub').textContent = 'Бойцы стреляют только прямо, поэтому в каждый момент выбирай полосу: набирать людей, сдерживать орду или вскрывать ящик с оружием. Всё сразу не успеть.';
+    $('#mSub').textContent = '';
     loot.hidden = true; stars.hidden = true;
   } else if (kind === 'win') {
     $('#mSub').textContent = `Выжили ${r.kept} из ${r.of} бойцов, вышедших на босса. Три звезды — если сохранить 90% отряда.`;
