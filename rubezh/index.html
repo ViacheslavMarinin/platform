@@ -174,6 +174,8 @@ h1.red{color:var(--red)}
 .wallet .w{display:flex;align-items:center;gap:6px}
 .wallet .buy{font:inherit;color:inherit;background:rgba(0,0,0,.3);border:1px solid rgba(242,197,61,.45);padding:4px 6px 4px 8px;cursor:pointer}
 .wallet .buy:hover{border-color:#f2c53d}
+.wallet .lbl{font-family:var(--body);font-weight:500;font-size:12px;color:#f2c53d;margin-left:4px;white-space:nowrap}
+.wallet{flex-wrap:wrap;row-gap:6px}
 .wallet .plus{display:inline-grid;place-items:center;width:18px;height:18px;background:#f2c53d;color:#3a2a08;font-size:15px;line-height:1;margin-left:2px}
 .coin{display:inline-block;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe9a0,#d6a12a 60%,#8a6114);box-shadow:0 0 0 2px rgba(0,0,0,.35);flex:none}
 .heart{color:#e0473a;font-size:16px;line-height:1}
@@ -236,6 +238,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
     <div class="stripe"></div>
     <div class="inner">
       <div class="pbar"><a href="/" class="home">‹ Мой маленький мир</a><button type="button" id="acct" class="acct" hidden>Войти</button></div>
+      <div class="wallet" id="wallet"><button type="button" class="w buy" id="buyCoins" title="Обменять уточки на монеты"><span class="coin"></span><b id="wCoins">0</b><span class="plus">+</span><span class="lbl">Купить монеты</span></button><span class="w" title="Жизни"><span class="heart">♥</span><b id="wLives">5</b><small id="wTimer"></small></span><span class="w" style="margin-left:auto"><small id="wNote"></small></span></div>
       <div class="head">
         <div class="htext">
           <p class="eyebrow" id="mEyebrow">Тактическая головоломка</p>
@@ -252,7 +255,6 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
       </div>
       <div class="stars" id="mStars" hidden></div>
       <div class="loot" id="mLoot" hidden></div>
-      <div class="wallet" id="wallet"><button type="button" class="w buy" id="buyCoins" title="Обменять уточки на монеты"><span class="coin"></span><b id="wCoins">0</b><span class="plus">+</span></button><span class="w" title="Жизни"><span class="heart">♥</span><b id="wLives">5</b><small id="wTimer"></small></span><span class="w" style="margin-left:auto"><small id="wNote"></small></span></div>
       <div class="chnav"><button id="chPrev" aria-label="Предыдущая глава">‹</button><h2 id="chTitle">Глава 1</h2><button id="chNext" aria-label="Следующая глава">›</button></div>
       <p id="chIntro" hidden></p>
       <div class="levels" id="levels"></div>
