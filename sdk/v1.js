@@ -231,6 +231,10 @@
   .mm-opt.need{border-color:#ffd23f;background:#fffbea}
   .mm-opt.on{border-color:#1f86b8;background:#eef8fc}
   .mm-opt:disabled{opacity:.45;cursor:default}
+  .mm-custom{display:block;font-size:13px;font-weight:800;color:#4d6b7a;margin:0 0 12px}
+  .mm-custom input{display:block;width:100%;margin-top:5px;padding:11px 12px;border:1.5px solid #cfe3ea;border-radius:12px;font:700 18px 'Nunito',system-ui,sans-serif;color:#1f3a4a;background:#fff}
+  .mm-custom input:focus{outline:2px solid #4aa8c4;outline-offset:1px}
+  .mm-custom small{display:block;margin-top:6px;font-size:12px;font-weight:600;color:#4d6b7a}
   .mm-opt small{display:block;font-size:11px;color:#7a5a00;font-weight:800}
   @keyframes mm-bob{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-4px)}}
   @media (prefers-reduced-motion:reduce){.mm-gift svg{animation:none}}
@@ -249,6 +253,22 @@
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-modal="true"></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
+    ov.addEventListener('input', e => {
+      if (!e.target.matches('[data-xcoins]') || !xs || busy) return;
+      xs.custom = e.target.value;
+      const r = Number(xs.rate), desired = Number(xs.custom);
+      const d = xs.custom !== '' && /^\d+$/.test(xs.custom) && Number.isSafeInteger(desired) && desired > 0 && Number.isSafeInteger(r) && r > 0
+        ? Math.ceil(desired / r) : null;
+      const have = Number(balances && balances.duck || 0);
+      xs.pick = d != null && Number.isSafeInteger(d) && d > 0 && d <= have ? d : null;
+      ov.querySelectorAll('[data-x]').forEach(el => el.classList.toggle('on', false));
+      const preview = ov.querySelector('[data-xpreview]');
+      if (preview) preview.textContent = xs.pick != null
+        ? 'Спишется ' + fmt(xs.pick) + ' ' + ducksWord(xs.pick) + ' · начислится ' + fmt(xs.pick * r) + ' ' + coinsWord(xs.pick * r)
+        : 'Укажи целое число монет в пределах доступных уточек';
+      const btn = ov.querySelector('[data-a="xgo"]');
+      if (btn){ btn.disabled = xs.pick == null; btn.textContent = xs.pick == null ? 'Обменять' : 'Обменять ' + fmt(xs.pick); }
+    });
     ov.addEventListener('keydown', e => { if (e.key === 'Enter' && !user && !gift && !fb && !xs){ e.preventDefault(); submit(); } if (e.key === 'Escape' && !busy) close(); });
   }
   const coinsWord = n => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? 'монет' : b === 1 ? 'монета' : b >= 2 && b <= 4 ? 'монеты' : 'монет'; };
@@ -274,11 +294,15 @@
     if (xs.need > 0){ const d = Math.ceil(xs.need / r); opts.push({ d, need: true }); }
     [10, 30, 100].forEach(d => { if (!opts.some(o => o.d === d)) opts.push({ d }); });
     if (xs.pick == null){ const first = opts.find(o => o.d <= have); xs.pick = first ? first.d : null; }
-    const pick = opts.find(o => o.d === xs.pick && o.d <= have);
+    const pick = xs.pick != null && Number.isSafeInteger(xs.pick) && xs.pick > 0 && xs.pick <= have ? { d: xs.pick } : null;
     card.innerHTML = top + `<div class="mm-xbal">${DUCK}${fmt(have)}</div>
       <p class="mm-xrate">1 уточка = ${fmt(r)} ${coinsWord(r)} · обратно не меняется</p>
       <div class="mm-opts">${opts.map(o => `<button type="button" class="mm-opt${o.need ? ' need' : ''}${pick && o.d === pick.d ? ' on' : ''}" data-x="${o.d}" ${o.d > have ? 'disabled' : ''}>
         <span class="d">${DUCK}${fmt(o.d)}</span><span class="a">→</span><span class="c">${o.need ? '<small>не хватает</small>' : ''}${fmt(o.d * r)} ${coinsWord(o.d * r)}</span></button>`).join('')}</div>
+      <label class="mm-custom">Или укажи, сколько монет хочешь получить
+        <input data-xcoins type="number" inputmode="numeric" min="1" step="1" placeholder="Например, 5000" value="${esc(xs.custom)}" ${busy ? 'disabled' : ''}>
+        <small data-xpreview>${xs.custom !== '' ? (pick ? `Спишется ${fmt(pick.d)} ${ducksWord(pick.d)} · начислится ${fmt(pick.d * r)} ${coinsWord(pick.d * r)}` : 'Укажи целое число монет в пределах доступных уточек') : 'Количество монет округляется вверх до целого количества уточек'}</small>
+      </label>
       ${have < (opts[0] ? opts[0].d : 1) && !pick ? '<p class="mm-note" style="margin:-4px 0 12px">Уточек пока не хватает. Их дарит Мой маленький мир.</p>' : ''}
       <p class="mm-err">${esc(xs.err || '')}</p>
       <div class="mm-row"><button class="mm-btn" data-a="close">Не сейчас</button><button class="mm-btn pri" data-a="xgo" ${!pick || busy ? 'disabled' : ''}>${busy ? 'Секунду…' : pick ? `Обменять ${fmt(pick.d)}` : 'Обменять'}</button></div>`;
@@ -381,7 +405,7 @@
     }
   }
   async function onClick(e){
-    const x = e.target.closest('[data-x]'); if (x && xs && !busy && !x.disabled){ xs.pick = +x.dataset.x; xs.err = ''; render(); return; }
+    const x = e.target.closest('[data-x]'); if (x && xs && !busy && !x.disabled){ xs.pick = +x.dataset.x; xs.custom = ''; xs.err = ''; render(); return; }
     const t = e.target.closest('[data-tab]'); if (t && !busy){ tab = t.dataset.tab; err = ''; render(); field('login').focus(); return; }
     const a = e.target.closest('[data-a]');
     if (!a){ if (e.target === ov && !busy && !(fb && !fb.sent && (fb.msg || '').trim())) close(); return; }
@@ -419,7 +443,7 @@
   }
   function startX(need, resolve){
     mount(); busy = false; err = ''; gift = 0;
-    const me = xs = { need, rate: null, pick: null, done: null, err: '', loading: true, resolve };
+    const me = xs = { need, rate: null, pick: null, custom: '', done: null, err: '', loading: true, resolve };
     render(); ov.hidden = false;
     Promise.all([rate(), user ? wallet().catch(() => balances) : null]).then(([r]) => {
       if (xs !== me) return; xs.rate = r; xs.loading = false; render();
