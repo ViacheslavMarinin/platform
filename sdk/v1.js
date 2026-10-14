@@ -257,7 +257,7 @@
       if (!e.target.matches('[data-xcoins]') || !xs || busy) return;
       xs.custom = e.target.value;
       const r = Number(xs.rate), desired = Number(xs.custom);
-      const d = xs.custom !== '' && /^\\d+$/.test(xs.custom) && Number.isSafeInteger(desired) && desired > 0 && Number.isSafeInteger(r) && r > 0
+      const d = xs.custom !== '' && /^\d+$/.test(xs.custom) && Number.isSafeInteger(desired) && desired > 0 && Number.isSafeInteger(r) && r > 0
         ? Math.ceil(desired / r) : null;
       const have = Number(balances && balances.duck || 0);
       xs.pick = d != null && Number.isSafeInteger(d) && d > 0 && d <= have ? d : null;
